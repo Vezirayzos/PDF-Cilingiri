@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.6.0.schema.json
+
+PackageIdentifier: Vezirayzos.PDFCilingiri
+PackageVersion: 36.0.0
+PackageLocale: tr-TR
+Publisher: Vezir
+PublisherUrl: https://github.com/Vezirayzos
+PackageName: PDF Çilingiri
+PackageUrl: https://github.com/Vezirayzos/PDF-Cilingiri
+License: MIT
+LicenseUrl: https://github.com/Vezirayzos/PDF-Cilingiri/blob/main/LICENSE
+ShortDescription: Tamamen istemci taraflı, güvenli, hızlı ve ücretsiz masaüstü PDF & evrak düzenleme stüdyosu.
+Description: |
+  PDF Çilingiri; PDF ve görsellerinizi birleştiren, sayfaları düzenleyen, 
+  300 DPI faks formatına çeviren, 4 köşeli perspektif düzelten ve leke silen 
+  kurulumsuz (portable) saf yerel bir Windows evrak stüdyosudur.
+Tags:
+  - pdf
+  - camscanner
+  - evrak
+  - birlestir
+  - ocr
+  - faks
+  - portable
+ManifestType: defaultLocale
+ManifestVersion: 1.6.0

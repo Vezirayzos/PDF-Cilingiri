@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.6.0.schema.json
+
+PackageIdentifier: Vezirayzos.PDFCilingiri
+PackageVersion: 36.0.0
+InstallerType: portable
+Commands:
+  - PDFCilingiri
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/Vezirayzos/PDF-Cilingiri/releases/download/v36/PDFCilingiri-v36-SingleFile.exe
+    InstallerSha256: C49E1ACE83E20F6965AC446803C5CAB0F762445A8146B384F756CE07FCD73879
+ManifestType: installer
+ManifestVersion: 1.6.0
