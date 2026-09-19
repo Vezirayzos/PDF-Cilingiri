@@ -1,0 +1,3448 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+  <title>PDF Çilingiri</title>
+  <meta content="PDF Çilingiri" name="application-name"/>
+  <meta content="PDF Çilingiri" name="apple-mobile-web-app-title"/>
+  <meta content="Tamamen tarayıcı üzerinde çalışan, güvenli, hızlı ve ücretsiz online PDF araçları." name="description"/>
+  <meta content="#0f172a" name="theme-color"/>
+  <meta content="yes" name="apple-mobile-web-app-capable"/>
+  <meta content="yes" name="mobile-web-app-capable"/>
+  <meta content="black-translucent" name="apple-mobile-web-app-status-bar-style"/>
+  <link href="https://cdn-icons-png.flaticon.com/512/337/337946.png" rel="apple-touch-icon"/>
+
+  <!-- PWA Manifest -->
+  <link href="data:application/manifest+json,%7B%22name%22%3A%22PDF%20%C3%87ilingiri%22%2C%22short_name%22%3A%22PDF%20%C3%87ilingiri%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F337%2F337946.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D" rel="manifest"/>
+
+  <!-- Yerel Çevrimdışı Kütüphaneler -->
+  <script src="vendor/pdf-lib.min.js"></script>
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/jszip.min.js"></script>
+  <script src="vendor/pako.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0ea5e9;
+      --accent: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-main);
+      font-family: var(--font);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid var(--card-border);
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 0.85rem 1.5rem;
+    }
+
+    .header-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-install {
+      display: none;
+      align-items: center;
+      gap: 0.4rem;
+      background: linear-gradient(135deg, #38bdf8, #0ea5e9);
+      color: #0f172a;
+      border: none;
+      padding: 0.4rem 0.9rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .btn-install:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.6);
+    }
+
+    .privacy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      justify-content: center;
+    }
+
+    .tab-btn {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 0.65rem 1.1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn:hover { border-color: var(--primary); color: var(--text-main); }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #0f172a;
+      border-color: var(--primary);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+    }
+
+    .tool-panel {
+      display: none;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1rem;
+      padding: 2rem;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+
+    .tool-panel.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tool-header { margin-bottom: 1.5rem; text-align: center; }
+    .tool-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .tool-desc { color: var(--text-muted); font-size: 0.95rem; }
+
+    .drop-zone {
+      border: 2px dashed var(--card-border);
+      border-radius: 0.75rem;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(15, 23, 42, 0.4);
+      transition: all 0.2s ease;
+      margin-bottom: 1.5rem;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.05);
+    }
+
+    .drop-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .file-input { display: none; }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+    }
+
+    .file-actions { display: flex; gap: 0.3rem; align-items: center; }
+
+    .btn-icon {
+      background: var(--card-border);
+      border: none;
+      color: var(--text-main);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.3rem 0.55rem;
+      border-radius: 0.3rem;
+      transition: background 0.15s ease;
+    }
+
+    .btn-icon:hover { background: var(--primary); color: #0f172a; }
+    .btn-icon:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #0f172a;
+      border: none;
+      padding: 0.85rem 1.5rem;
+      border-radius: 0.5rem;
+      font-weight: 700;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+    }
+
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); }
+    .form-control {
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    .form-control:focus { border-color: var(--primary); }
+
+    /* Mode Selector */
+    .mode-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .mode-selector-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .mode-selector, .mode-selector-3 { grid-template-columns: 1fr; }
+    }
+
+    .mode-card {
+      background: var(--bg);
+      border: 2px solid var(--card-border);
+      padding: 1rem;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .mode-card:hover { border-color: var(--primary); }
+    .mode-card.active {
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.12);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.2);
+    }
+
+    .mode-card input[type="radio"] {
+      margin-top: 0.25rem;
+      accent-color: var(--primary);
+      width: 1.1rem;
+      height: 1.1rem;
+      cursor: pointer;
+    }
+
+    .mode-info h4 { font-size: 0.95rem; margin-bottom: 0.25rem; color: var(--text-main); }
+    .mode-info p { font-size: 0.8rem; color: var(--text-muted); line-height: 1.35; }
+
+    /* Page Grid for Rotate / Delete / Reorder */
+    .organize-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      padding: 0.6rem 1rem;
+      border-radius: 0.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .page-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      max-height: 520px;
+      overflow-y: auto;
+      padding: 0.5rem;
+      border: 1px solid var(--card-border);
+      border-radius: 0.5rem;
+      background: rgba(15, 23, 42, 0.3);
+    }
+
+    .page-card {
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.6rem;
+      padding: 0.6rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: grab;
+      user-select: none;
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .page-card:active { cursor: grabbing; }
+    .page-card.drag-over {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+      transform: scale(1.03);
+    }
+    .page-card.dragging { opacity: 0.4; }
+
+    .page-card-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .page-card canvas {
+      max-width: 100%;
+      height: auto;
+      border-radius: 0.25rem;
+      transition: transform 0.2s ease;
+      background: #ffffff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    .page-card.deleted {
+      opacity: 0.35;
+      border-color: var(--danger);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    /* Result Comparison Badge */
+    .result-badge {
+      display: flex;
+      justify-content: space-around;
+      background: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin: 1rem 0;
+      text-align: center;
+    }
+
+    .result-item h5 { font-size: 0.8rem; color: var(--text-muted); }
+    .result-item p { font-size: 1.1rem; font-weight: 700; color: var(--text-main); }
+    .result-item .save-rate { color: var(--accent); }
+
+    /* OCR Text Area */
+    .ocr-output-container {
+      margin-top: 1.5rem;
+      display: none;
+    }
+
+    .ocr-textarea {
+      width: 100%;
+      height: 250px;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      border-radius: 0.5rem;
+      color: var(--text-main);
+      padding: 1rem;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+      outline: none;
+      margin-bottom: 0.75rem;
+    }
+
+    .ocr-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .btn-secondary {
+      background: var(--card-border);
+      color: var(--text-main);
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 0.4rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.15s ease;
+    }
+
+    .btn-secondary:hover { background: var(--text-muted); color: #0f172a; }
+
+    .status-box {
+      margin-top: 1rem;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.9rem;
+      text-align: center;
+      display: none;
+    }
+
+    .status-box.info {
+      display: block;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    .status-box.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .status-box.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    /* Reklam Alanı (Footer Üstü) */
+    .ad-banner-wrapper {
+      margin: 2.5rem auto 1rem;
+      max-width: 970px;
+      padding: 0.75rem;
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid var(--card-border);
+      border-radius: 0.75rem;
+      text-align: center;
+      min-height: 90px;
+      overflow: hidden;
+    }
+
+    .ad-badge {
+      display: block;
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      opacity: 0.7;
+    }
+
+    /* Belge Tarayıcı (CamScanner Tarzı) Stilleri */
+    .scan-canvas-container {
+      position: relative;
+      margin: 0 auto;
+      max-width: 100%;
+      background: #020617;
+      border: 1px solid var(--card-border);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      touch-action: none;
+      user-select: none;
+      cursor: crosshair;
+      display: inline-block;
+    }
+
+    #scan-canvas, #modal-canvas {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .scan-loupe {
+      position: absolute;
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      border: 3px solid var(--primary);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 10px rgba(56, 189, 248, 0.4);
+      pointer-events: none;
+      display: none;
+      overflow: hidden;
+      background: #000;
+      z-index: 100;
+      transform: translate(-50%, -100%);
+    }
+
+    #scan-loupe-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .scan-loupe-crosshair {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 24px;
+      height: 24px;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .scan-loupe-crosshair::before,
+    .scan-loupe-crosshair::after {
+      content: '';
+      position: absolute;
+      background: #ef4444;
+      box-shadow: 0 0 2px #fff;
+    }
+
+    .scan-loupe-crosshair::before {
+      top: 11px;
+      left: 0;
+      width: 24px;
+      height: 2px;
+    }
+
+    .scan-loupe-crosshair::after {
+      top: 0;
+      left: 11px;
+      width: 2px;
+      height: 24px;
+    }
+
+    .scan-brush-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    .scan-brush-btn:hover {
+      color: var(--text);
+    }
+    .scan-brush-btn.active {
+      background: var(--primary) !important;
+      color: #fff !important;
+    }
+
+    /* Master Studio Stilleri */
+    .studio-page-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 640px) {
+      .studio-page-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 0.75rem;
+      }
+    }
+
+    .studio-page-card {
+      background: var(--bg);
+      border: 2px solid var(--card-border);
+      border-radius: 0.75rem;
+      padding: 0.6rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+    .studio-page-card:hover {
+      border-color: rgba(56, 189, 248, 0.5);
+      transform: translateY(-2px);
+    }
+    .studio-page-card.selected {
+      border-color: var(--primary);
+      background: rgba(56, 189, 248, 0.08);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+    .studio-page-card-header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+    .studio-page-thumb-wrap {
+      width: 100%;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #020617;
+      border-radius: 0.4rem;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .studio-page-thumb-wrap canvas, .studio-page-thumb-wrap img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+    .studio-page-card-footer {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+        .studio-page-card { content-visibility: auto; contain-intrinsic-size: 0 280px; }
+
+    .studio-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem;
+    }
+    .studio-modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 1rem;
+      width: 96vw;
+      max-width: 1280px;
+      height: 95vh;
+      max-height: 95vh;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 1rem 1.25rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.7);
+    }
+    .studio-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      border-bottom: 1px solid var(--card-border);
+      padding-bottom: 0.75rem;
+    }
+
+    .export-accordion summary::-webkit-details-marker {
+      display: none;
+    }
+
+    footer {
+      border-top: 1px solid var(--card-border);
+      padding: 1.5rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="header-container">
+      <a class="logo" href="#">
+        <span>🔑</span>
+        <span>PDF Çilingiri</span>
+      </a>
+      <div class="header-actions">
+        <button class="btn-install" id="pwa-install-btn" onclick="installPWA()" aria-label="Uygulamayı ana ekrana ekle">
+          <span>📲</span>
+          <span>Uygulamayı Yükle</span>
+        </button>
+        <div class="privacy-badge">
+          <span>🔒</span>
+          <span>%100 İstemci Taraflı • Sıfır Sunucu Kaydı</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- MASTER STUDIO PANEL -->
+    <div class="tool-panel active" id="panel-studio" style="display:block;">
+      <div class="tool-header">
+        <h1 class="tool-title" style="font-size: 1.8rem; background: linear-gradient(135deg, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+          ✨ Evrak &amp; Belge Stüdyosu
+        </h1>
+        <p class="tool-desc">
+          PDF ve görsellerinizi birleştirin, sayfaları düzenleyin, 300 DPI faks formatına çevirin, leke silin veya OCR yapın.
+        </p>
+      </div>
+
+      <!-- YÜKLEME ALANI -->
+      <div class="drop-zone" id="studio-drop-zone" onclick="if(event.target.tagName !== 'BUTTON' &amp;&amp; !event.target.closest('button')) document.getElementById('studio-file-input').click()">
+        <div class="drop-icon">📑</div>
+        <p><strong id="studio-drop-text">PDF ve Görselleri Buraya Sürükleyin veya Seçin</strong></p>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.3rem;">
+          PDF, JPG, PNG, WebP desteklenir • Çoklu ve ardışık dosya ekleyebilirsiniz
+        </p>
+        <div style="display: flex; gap: 0.75rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap;">
+          <button type="button" class="btn-primary" onclick="document.getElementById('studio-camera-input').click()" style="width: auto; padding: 0.65rem 1.3rem; background: linear-gradient(135deg, #3b82f6, #1d4ed8); display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>📷</span><span>Fotoğraf Çek</span>
+          </button>
+          <button type="button" class="btn-secondary" onclick="document.getElementById('studio-file-input').click()" style="width: auto; padding: 0.65rem 1.3rem; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <span>📁</span><span>Dosya Ekle (PDF &amp; Görsel)</span>
+          </button>
+        </div>
+        <input accept="application/pdf,image/*" multiple="multiple" class="file-input" id="studio-file-input" onchange="handleStudioAddFiles(this.files)" type="file" style="display:none;"/>
+        <input accept="image/*" capture="environment" class="file-input" id="studio-camera-input" onchange="handleStudioAddFiles(this.files)" type="file" style="display:none;"/>
+      </div>
+
+      <div class="status-box" id="studio-status" style="display:none;"></div>
+
+      <!-- KADEME 1: DOSYA MASASI (Hafif ve Hızlı Önizlemesiz Liste) -->
+      <div id="stage-files" style="display:none; margin-top: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+          <h3 style="font-size: 1.1rem; margin:0;" id="stage-files-title">📂 Eklenen Dosyalar (0)</h3>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn-secondary" onclick="document.getElementById('studio-file-input').click()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              ➕ Daha Fazla Ekle
+            </button>
+            <button class="btn-secondary" onclick="clearStudioAll()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem; color: #ef4444;">
+              🗑️ Temizle
+            </button>
+          </div>
+        </div>
+
+        <div class="file-list" id="studio-file-list"></div>
+
+        <!-- Hızlı Birleştirme Modu Seçici -->
+        <div style="background: var(--bg); border: 1px solid var(--card-border); border-radius: 0.75rem; padding: 0.85rem 1rem; margin-top: 1.25rem;">
+          <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 0.6rem; color: var(--primary); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+            <span>⚡ Hızlı Birleştirme ve İndirme Modu:</span>
+            <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal;">(Önizleme beklemeden doğrudan işler)</span>
+          </div>
+          <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+            <label style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.85rem; cursor:pointer; background:rgba(255,255,255,0.05); padding:0.4rem 0.65rem; border-radius:0.4rem; border:1px solid var(--card-border);">
+              <input type="radio" name="quick-merge-mode" value="orig" checked="checked" onchange="onQuickModeChange()"/>
+              <span>🌈 Orijinal (Kayıpsız / Vektör)</span>
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.85rem; cursor:pointer; background:rgba(255,255,255,0.05); padding:0.4rem 0.65rem; border-radius:0.4rem; border:1px solid var(--card-border);">
+              <input type="radio" name="quick-merge-mode" value="magic" onchange="onQuickModeChange()"/>
+              <span>✨ Sihirli Renk</span>
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.85rem; cursor:pointer; background:rgba(255,255,255,0.05); padding:0.4rem 0.65rem; border-radius:0.4rem; border:1px solid var(--card-border);">
+              <input type="radio" name="quick-merge-mode" value="bw" onchange="onQuickModeChange()"/>
+              <span>📄 Siyah &amp; Beyaz</span>
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.85rem; cursor:pointer; background:rgba(255,255,255,0.05); padding:0.4rem 0.65rem; border-radius:0.4rem; border:1px solid var(--card-border);">
+              <input type="radio" name="quick-merge-mode" value="ccitt" onchange="onQuickModeChange()"/>
+              <span>🏛️ 300 DPI Faks</span>
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:0.35rem; font-size:0.85rem; cursor:pointer; background:rgba(255,255,255,0.05); padding:0.4rem 0.65rem; border-radius:0.4rem; border:1px solid var(--card-border);">
+              <input type="radio" name="quick-merge-mode" value="ocr" onchange="onQuickModeChange()"/>
+              <span>🔍 OCR ile Metin Tanı</span>
+            </label>
+            <select id="quick-ocr-lang" style="background: var(--bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 0.35rem 0.5rem; border-radius: 0.4rem; font-size: 0.8rem; display: none;">
+              <option value="tur+eng">Türkçe + İngilizce</option>
+              <option value="tur">Sadece Türkçe</option>
+              <option value="eng">Only English</option>
+              <option value="deu">Almanca</option>
+              <option value="ara">Arapça</option>
+            </select>
+          </div>
+        </div>
+
+                <!-- Kademe 1 Dışa Aktarma & Detaylı Mod Merkezi -->
+        <div style="background: var(--bg); border: 2px solid var(--card-border); border-radius: 0.75rem; padding: 1rem; margin-top: 1.25rem;">
+          <div style="font-weight: 700; font-size: 1rem; color: var(--text-main); margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+            <span>💾 Önizlemesiz Hızlı Dışa Aktar ve İndir:</span>
+            <span style="font-size: 0.8rem; color: var(--primary);">Yukarıda seçilen mod uygulanır</span>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.65rem;">
+            <button class="btn-primary" onclick="quickExportFiles('pdf-single')" style="padding: 0.85rem; background: linear-gradient(135deg, #10b981, #059669); font-size: 0.9rem;">
+              📑 Tek Birleşik PDF İndir
+            </button>
+            <button class="btn-secondary" onclick="quickExportFiles('pdf-zip')" style="padding: 0.85rem; font-size: 0.9rem;">
+              📦 Ayrı Ayrı PDF İndir (ZIP)
+            </button>
+            <button class="btn-secondary" onclick="quickExportFiles('jpg-zip')" style="padding: 0.85rem; font-size: 0.9rem;">
+              📦 Ayrı Ayrı JPG İndir (ZIP)
+            </button>
+            <button class="btn-secondary" onclick="quickExportFiles('png-zip')" style="padding: 0.85rem; font-size: 0.9rem;">
+              📦 Ayrı Ayrı PNG İndir (ZIP)
+            </button>
+          </div>
+
+          <div style="margin-top: 1rem; border-top: 1px dashed var(--card-border); padding-top: 0.85rem; text-align: center;">
+            <button class="btn-primary" onclick="generateStudioThumbnails(false)" style="width: 100%; max-width: 480px; padding: 0.85rem 1.5rem; background: linear-gradient(135deg, #0ea5e9, #6366f1); font-size: 0.95rem;">
+              🎨 Sayfaları Ayrıntılı Düzenle / İncele ➔
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KADEME 2: SAYFA STÜDYOSU (Görsel Sayfa Izgarası & Düzenleme) -->
+      <div id="stage-pages" style="display:none; margin-top: 1.8rem;">
+        
+        <!-- Üst Kontrol Barı -->
+        <div class="studio-bar" style="background: var(--bg); border: 1px solid var(--card-border); border-radius: 0.75rem; padding: 0.85rem 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+          <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+            <button class="btn-secondary" onclick="backToFilesStage()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              ⬅️ Dosya Listesi
+            </button>
+            <button class="btn-secondary" onclick="document.getElementById('studio-file-input').click()" style="padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+              ➕ Yeni Dosya Ekle
+            </button>
+            <span id="studio-page-stats" style="font-size: 0.9rem; font-weight: 600; margin-left: 0.5rem; color: var(--primary);">
+              0 Sayfa
+            </span>
+          </div>
+
+          <!-- Seçim Araçları -->
+          <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
+            <button class="btn-icon" title="Tümünü Seç" onclick="selectAllPages(true)" style="padding: 0.45rem 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+              <span>✓ Tümünü Seç</span>
+            </button>
+            <button class="btn-icon" title="Seçimi Tersine Çevir" onclick="invertPageSelection()" style="padding: 0.45rem 0.75rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+              <span>⇄ Ters Çevir</span>
+            </button>
+            <button class="btn-icon" title="Seçimi Temizle" onclick="selectAllPages(false)" style="padding: 0.45rem 0.75rem;">
+              <span>✕ Temizle</span>
+            </button>
+            <button class="btn-icon" title="Seçilen Sayfaları Sil" onclick="deleteSelectedPages()" style="padding: 0.45rem 0.75rem; color: #ef4444;" id="btn-delete-selected">
+              <span>🗑️ Sil</span>
+            </button>
+            <!-- Mobilde Aralık Seçimi -->
+            <div style="display: inline-flex; align-items: center; gap: 0.25rem; margin-left: 0.25rem;">
+              <input type="number" id="studio-range-start" min="1" placeholder="İlk" style="width: 50px; background: var(--bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 0.3rem 0.35rem; border-radius: 0.3rem; font-size: 0.8rem; text-align: center;"/>
+              <span style="font-size: 0.8rem; color: var(--text-muted);">-</span>
+              <input type="number" id="studio-range-end" min="1" placeholder="Son" style="width: 50px; background: var(--bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 0.3rem 0.35rem; border-radius: 0.3rem; font-size: 0.8rem; text-align: center;"/>
+              <button class="btn-secondary" onclick="selectPageRange()" style="padding: 0.3rem 0.6rem; font-size: 0.8rem;">
+                ✓ Aralık Seç
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+          💡 <em>İpucu: Kartların üzerindeki kutucukları işaretleyerek sayfaları seçebilir, <strong>Shift</strong> tuşuna basarak ardışık aralık seçimi yapabilir ve kartları sürükleyerek ya da ◀ ▶ oklarıyla sayfaların sırasını değiştirebilirsiniz.</em>
+        </p>
+
+        <!-- SEÇİLİ SAYFALAR ARAÇ ÇUBUĞU (Sticky / Belirgin) -->
+        <div id="selection-action-bar" style="background: rgba(15, 23, 42, 0.95); border: 2px solid var(--primary); border-radius: 0.75rem; padding: 0.85rem 1rem; margin-bottom: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.4); display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="font-weight: 700; color: #38bdf8; font-size: 0.95rem;">
+              <span id="selected-pages-count">0</span> Sayfa Seçili:
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+              <!-- OCR Dil & Buton -->
+              <div style="display:inline-flex; align-items:center; gap:0.25rem;">
+                <select id="stage-ocr-lang" style="background: var(--bg); border: 1px solid var(--card-border); color: var(--text-main); padding: 0.4rem 0.45rem; border-radius: 0.4rem; font-size: 0.8rem;">
+                  <option value="tur+eng">TR + EN</option>
+                  <option value="tur">Türkçe</option>
+                  <option value="eng">English</option>
+                  <option value="deu">Deutsch</option>
+                  <option value="ara">Arapça</option>
+                </select>
+                <button class="btn-secondary" onclick="batchOcrSelected()" style="padding: 0.45rem 0.75rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                  <span>🔍 Metin Tanı</span>
+                </button>
+              </div>
+
+              <button class="btn-secondary" onclick="batchCcittSelected()" style="padding: 0.45rem 0.85rem; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 0.3rem;">
+                <span>🏛️ 300 DPI Faks (S/B)</span>
+              </button>
+              
+              <!-- Filtre Grubu -->
+              <div style="display: inline-flex; border: 1px solid var(--card-border); border-radius: 0.4rem; overflow: hidden;">
+                <button class="btn-icon" onclick="batchFilterSelected('magic')" title="Sihirli Renk" style="padding: 0.45rem 0.75rem; border-radius: 0;">
+                  ✨ Sihirli
+                </button>
+                <button class="btn-icon" onclick="batchFilterSelected('bw')" title="Net Metin (Siyah-Beyaz)" style="padding: 0.45rem 0.75rem; border-radius: 0;">
+                  📄 S/B
+                </button>
+                <button class="btn-icon" onclick="batchFilterSelected('orig')" title="Orijinal Renkleri Geri Getir" style="padding: 0.45rem 0.75rem; border-radius: 0;">
+                  🌈 Orijinal
+                </button>
+              </div>
+
+              <button class="btn-secondary" onclick="batchRotateSelected(90)" title="Seçilenleri 90° Sağa Döndür" style="padding: 0.45rem 0.75rem; font-size: 0.85rem;">
+                ↻ 90°
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SAYFA IZGARASI (Grid) -->
+        <div class="studio-page-grid" id="studio-page-grid"></div>
+
+        <!-- DIŞA AKTARMA MERKEZİ (Açılır Kutu / Accordion) -->
+        <details class="export-accordion" id="studio-export-details" style="margin-top: 2rem; background: var(--bg); border: 2px solid var(--card-border); border-radius: 0.75rem; padding: 1rem; transition: all 0.2s ease;">
+          <summary style="font-weight: 700; font-size: 1.05rem; cursor: pointer; color: var(--text-main); display: flex; justify-content: space-between; align-items: center; user-select: none;">
+            <span>💾 Dışa Aktar ve İndir (<span id="export-page-count">0</span> Sayfa Seçili)</span>
+            <span style="font-size: 0.9rem; color: var(--primary);">Seçenekleri Göster ▾</span>
+          </summary>
+          
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-top: 1.25rem;">
+            <button class="btn-primary" onclick="exportPages('pdf-single')" style="padding: 0.9rem; background: linear-gradient(135deg, #10b981, #059669);">
+              📑 Tek Birleşik PDF Olarak İndir
+            </button>
+            <button class="btn-secondary" onclick="exportPages('pdf-zip')" style="padding: 0.9rem;">
+              📦 Ayrı Ayrı PDF İndir (ZIP)
+            </button>
+            <button class="btn-secondary" onclick="exportPages('jpg-zip')" style="padding: 0.9rem;">
+              📦 Ayrı Ayrı JPG İndir (ZIP)
+            </button>
+            <button class="btn-secondary" onclick="exportPages('png-zip')" style="padding: 0.9rem;">
+              📦 Ayrı Ayrı PNG İndir (ZIP)
+            </button>
+          </div>
+        </details>
+
+        <!-- OCR ÇIKTI ALANI -->
+        <div id="studio-ocr-result" style="display:none; margin-top: 1.5rem; background: var(--bg); border: 1px solid var(--card-border); border-radius: 0.75rem; padding: 1.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+            <h4 style="margin:0; font-size: 1rem; color: #38bdf8;">🔍 OCR Metin Çıktısı</h4>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-secondary" onclick="copyStudioOcrText()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                📋 Kopyala
+              </button>
+              <button class="btn-secondary" onclick="downloadStudioOcrText()" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">
+                💾 .TXT İndir
+              </button>
+              <button class="btn-icon" onclick="document.getElementById('studio-ocr-result').style.display='none'" style="padding: 0.35rem 0.6rem;">
+                ✕
+              </button>
+            </div>
+          </div>
+          <textarea id="studio-ocr-textarea" readonly style="width: 100%; height: 160px; background: #020617; border: 1px solid var(--card-border); border-radius: 0.5rem; color: #f8fafc; padding: 0.75rem; font-family: monospace; font-size: 0.85rem; resize: vertical;"></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- İNCE AYAR MODALI (CamScanner Tam Ekran Editör) -->
+    <div id="studio-modal" class="studio-modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Sayfa düzenleme ve ince ayar" onclick="if(event.target === this) closeStudioModal(false)">
+      <div class="studio-modal-content">
+        <div class="studio-modal-header">
+          <h3 style="margin:0; font-size: 1.15rem; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
+            <span>✏️</span><span>Sayfa Düzenle &amp; CamScanner İnce Ayar</span>
+          </h3>
+          <button class="btn-icon" onclick="closeStudioModal(false)" style="font-size: 1.1rem; padding: 0.4rem 0.75rem;" title="Kapat (Esc)" aria-label="Modalı kapat">✕</button>
+        </div>
+        
+        <!-- Modal Üst Araç Çubukları -->
+        <div style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+          <!-- Satır 1: Köşe Algılama & Perspektif -->
+          <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center; align-items: center;">
+            <div style="display: inline-flex; align-items: center; gap: 0.25rem; background: rgba(255,255,255,0.06); padding: 0.2rem 0.45rem; border-radius: 0.5rem; border: 1px solid var(--card-border);">
+              <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-right: 0.25rem;">📐 Otomatik Kırp:</span>
+              <button class="btn-secondary" onclick="modalAutoDetectFastJS()" title="0 KB Dış Kütüphanesiz Hızlı Sobel Kenar Tespiti" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">
+                saf js
+              </button>
+              <button class="btn-secondary" onclick="modalAutoDetect()" title="OpenCV.js Yapay Zeka & Poligon Tespiti" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">
+                Open CV
+              </button>
+              <button class="btn-secondary" onclick="modalAutoDetectJSFeat()" title="JSFeat Canny & Çizgi Analizi" style="padding: 0.35rem 0.65rem; font-size: 0.8rem;">
+                JS feat
+              </button>
+            </div>
+            <button class="btn-secondary" onclick="modalResetCorners()" title="Köşeleri tam sayfa %100 sınırlarına sıfırlar" style="padding: 0.4rem 0.75rem; font-size: 0.82rem;">
+              🎯 Köşeleri Sıfırla (%100)
+            </button>
+            <button class="btn-secondary" onclick="modalRotateSource()" title="Görseli 90 derece döndür" style="padding: 0.4rem 0.75rem; font-size: 0.82rem;">
+              ↻ 90°
+            </button>
+            <button class="btn-primary" onclick="modalProcessWarp()" style="padding: 0.4rem 0.95rem; font-size: 0.82rem; background: linear-gradient(135deg, #3b82f6, #1d4ed8);">
+              ✨ Perspektifi Düzelt
+            </button>
+          </div>
+
+          <!-- Satır 2: Leke Silici & Filtreler (Hemen Kullanıma Hazır!) -->
+          <div style="display: flex; gap: 0.45rem; justify-content: center; align-items: center; flex-wrap: wrap; background: rgba(15, 23, 42, 0.6); padding: 0.4rem 0.6rem; border-radius: 0.5rem; border: 1px solid var(--card-border);">
+            <button class="btn-secondary" id="modal-eraser-btn" onclick="toggleModalEraser()" style="padding: 0.35rem 0.75rem; font-size: 0.82rem;">
+              🧹 Leke Silici: Kapalı
+            </button>
+            <div style="display: inline-flex; gap: 0.25rem;">
+              <button class="scan-brush-btn active" id="modal-brush-15" onclick="setModalBrushSize(15)">15px</button>
+              <button class="scan-brush-btn" id="modal-brush-30" onclick="setModalBrushSize(30)">30px</button>
+              <button class="scan-brush-btn" id="modal-brush-50" onclick="setModalBrushSize(50)">50px</button>
+            </div>
+            <button class="btn-secondary" onclick="modalUndo()" style="padding: 0.35rem 0.7rem; font-size: 0.82rem;">
+              ↩️ Geri Al
+            </button>
+            <div style="display: inline-flex; border: 1px solid var(--card-border); border-radius: 0.4rem; overflow: hidden; margin-left: 0.25rem;">
+              <button class="btn-icon" onclick="applyModalFilter('magic')" style="padding: 0.35rem 0.65rem; border-radius:0; font-size:0.8rem;">✨ Sihirli</button>
+              <button class="btn-icon" onclick="applyModalFilter('bw')" style="padding: 0.35rem 0.65rem; border-radius:0; font-size:0.8rem;">📄 S/B</button>
+              <button class="btn-icon" onclick="applyModalFilter('orig')" style="padding: 0.35rem 0.65rem; border-radius:0; font-size:0.8rem;">🌈 Orijinal</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Modal Çalışma Alanı (Canvas & Büyüteç & Sonuç) -->
+        <div style="text-align: center; position: relative; overflow: hidden; flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.3); border-radius: 0.5rem; padding: 0.5rem;">
+          <div class="scan-canvas-container" id="modal-canvas-wrap">
+            <canvas id="modal-canvas"></canvas>
+            <div class="scan-loupe" id="modal-loupe">
+              <canvas height="130" id="modal-loupe-canvas" width="130"></canvas>
+              <div class="scan-loupe-crosshair"></div>
+            </div>
+          </div>
+          <div id="modal-result-wrap" style="display:none; width: 100%;">
+            <canvas id="modal-result-canvas" style="max-width: 100%; max-height: 62vh; border: 1px solid var(--card-border); border-radius: 0.5rem;"></canvas>
+          </div>
+        </div>
+
+        <!-- Modal Alt Kaydet / Kapat -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.75rem; border-top: 1px solid var(--card-border); padding-top: 0.75rem;">
+          <span style="font-size: 0.8rem; color: var(--text-muted);">
+            💡 <em>Leke siliciyle istenmeyen gölge ve lekeleri boyayın veya köşeleri tutup perspektifi düzeltin.</em>
+          </span>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="btn-secondary" onclick="closeStudioModal(false)" style="padding: 0.55rem 1.1rem;">
+              Vazgeç
+            </button>
+            <button class="btn-primary" onclick="saveStudioModal()" style="padding: 0.55rem 1.4rem; background: linear-gradient(135deg, #10b981, #059669);">
+              ✓ Değişiklikleri Kaydet
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+  </main>
+
+  <footer>
+    <p>Tüm işlemler doğrudan tarayıcınızda gerçekleşir. Dosyalarınız hiçbir sunucuya yüklenmez.</p>
+    <p style="margin-top: 0.5rem; font-size: 0.85rem;">Tasarım <a href="mailto:mkrts88@gmail.com" style="color: var(--primary); text-decoration: none; font-weight: 600;">Vezir</a></p>
+  </footer>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+
+    /* PWA */
+    document.title = "PDF Çilingiri";
+    try {
+      const manifestObj = {
+        name: "PDF Çilingiri",
+        short_name: "PDF Çilingiri",
+        description: "PDF Çilingiri - Hızlı, Güvenli ve İstemci Taraflı Online PDF Araçları",
+        start_url: window.location.href,
+        scope: window.location.origin + '/',
+        display: "standalone",
+        background_color: "#0f172a",
+        theme_color: "#0f172a",
+        icons: [
+          {
+            src: "https://cdn-icons-png.flaticon.com/512/337/337946.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable"
+          }
+        ]
+      };
+      const manifestBlob = new Blob([JSON.stringify(manifestObj)], { type: 'application/manifest+json' });
+      const manifestUrl = URL.createObjectURL(manifestBlob);
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        manifestLink.href = manifestUrl;
+      }
+    } catch (e) {}
+
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('pwa-install-btn');
+      if (btn) btn.style.display = 'inline-flex';
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('pwa-install-btn').style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    if ('serviceWorker' in navigator) {
+      try {
+        const swBlob = new Blob([
+          'const CC="pdf-cilingiri-v1";' +
+          'const CU=["https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js",' +
+          '"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",' +
+          '"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js",' +
+          '"https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js",' +
+          '"https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"];' +
+          'self.addEventListener("install",e=>{e.waitUntil(caches.open(CC).then(c=>Promise.all(CU.map(u=>fetch(u).then(r=>c.put(u,r)).catch(()=>{})))).then(()=>self.skipWaiting()));});' +
+          'self.addEventListener("activate",e=>{e.waitUntil(self.clients.claim());});' +
+          'self.addEventListener("fetch",e=>{const url=e.request.url;if(CU.includes(url)){e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{caches.open(CC).then(c=>c.put(e.request,res.clone()));return res;})));return;}e.respondWith(fetch(e.request).catch(()=>caches.match(e.request)));});'
+        ], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(() => {});
+      } catch (e) {}
+    }
+
+        function getUserFriendlyError(err) {
+      const msg = (err && err.message) ? err.message : String(err);
+      if (msg.includes('detached ArrayBuffer') || msg.includes('ArrayBuffer')) {
+        return 'Dosya okuma hatası. Lütfen dosyayı kaldırıp yeniden ekleyin.';
+      }
+      if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('net::')) {
+        return 'İnternet bağlantısı hatası. Bağlantınızı kontrol edin.';
+      }
+      if (msg.includes('password') || msg.includes('encrypt')) {
+        return 'Bu PDF şifre korumalı. Şifresiz sürümü kullanın.';
+      }
+      if (msg.includes('Invalid') || msg.includes('corrupt')) {
+        return 'Dosya bozuk veya geçersiz format. Başka dosya deneyin.';
+      }
+      if (msg.includes('memory') || msg.includes('Memory')) {
+        return 'Yetersiz bellek. Daha küçük dosya kullanın veya sayfayı yenileyin.';
+      }
+      return msg;
+    }
+
+    function showStatus(elemId, msg, type = 'info') {
+      const el = document.getElementById(elemId);
+      if (!el) return;
+      el.className = 'status-box ' + type;
+      el.innerText = msg;
+      el.style.display = 'block';
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    /* ==========================================================================
+       CORE SHARED HELPERS (Ortak Fonksiyon Havuzu)
+       ========================================================================== */
+    const _vendorMap = {
+      'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js': 'vendor/jszip.min.js',
+      'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js': 'vendor/tesseract.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/jsfeat/0.0.8/jsfeat-min.js': 'vendor/jsfeat.min.js'
+    };
+    const _loadedScripts = {};
+    function loadExternalScript(src) {
+      if (_vendorMap[src]) src = _vendorMap[src];
+      if (_loadedScripts[src]) return _loadedScripts[src];
+      _loadedScripts[src] = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error('Kütüphane yüklenemedi: ' + src));
+        document.head.appendChild(script);
+      });
+      return _loadedScripts[src];
+    }
+
+    async function renderPdfPageToCanvas(page, scale = 1.0) {
+      const viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      return { canvas, ctx, viewport };
+    }
+
+    async function canvasToSinglePagePdf(canvas, quality = 0.92) {
+      const imgDataUrl = canvas.toDataURL('image/jpeg', quality);
+      const imgBytes = await fetch(imgDataUrl).then(res => res.arrayBuffer());
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      const embeddedImg = await pdfDoc.embedJpg(imgBytes);
+      const page = pdfDoc.addPage([canvas.width, canvas.height]);
+      page.drawImage(embeddedImg, {
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height
+      });
+      return await pdfDoc.save();
+    }
+
+
+    /* --- CCITT GROUP 4 (T.6) FAKS ENCODER (IRFANVIEW / ABBYY STANDARDI) --- */
+    const CCITT_W_TERM = [
+      [0x35, 8], [0x7, 6], [0x7, 4], [0x8, 4], [0xb, 4], [0xc, 4], [0xe, 4], [0xf, 4],
+      [0x13, 5], [0x14, 5], [0x7, 5], [0x8, 5], [0x8, 6], [0x3, 6], [0x34, 6], [0x35, 6],
+      [0x2a, 6], [0x2b, 6], [0x27, 7], [0xc, 7], [0x8, 7], [0x17, 7], [0x3, 7], [0x4, 7],
+      [0x28, 7], [0x2b, 7], [0x13, 7], [0x24, 7], [0x18, 7], [0x2, 8], [0x3, 8], [0x1a, 8],
+      [0x1b, 8], [0x12, 8], [0x13, 8], [0x14, 8], [0x15, 8], [0x16, 8], [0x17, 8], [0x28, 8],
+      [0x29, 8], [0x2a, 8], [0x2b, 8], [0x2c, 8], [0x2d, 8], [0x4, 8], [0x5, 8], [0xa, 8],
+      [0xb, 8], [0x52, 8], [0x53, 8], [0x54, 8], [0x55, 8], [0x24, 8], [0x25, 8], [0x58, 8],
+      [0x59, 8], [0x5a, 8], [0x5b, 8], [0x4a, 8], [0x4b, 8], [0x32, 8], [0x33, 8], [0x34, 8]
+    ];
+    const CCITT_EXT_MAKE = [
+      [0x08, 11], [0x0c, 11], [0x0d, 11], [0x12, 12], [0x13, 12], [0x14, 12],
+      [0x15, 12], [0x16, 12], [0x17, 12], [0x1c, 12], [0x1d, 12], [0x1e, 12], [0x1f, 12]
+    ];
+
+    const CCITT_W_MAKE = [
+      [0x1b, 5], [0x12, 5], [0x17, 6], [0x37, 7], [0x36, 8], [0x37, 8], [0x64, 8], [0x65, 8],
+      [0x68, 8], [0x67, 8], [0xcc, 9], [0xcd, 9], [0xd2, 9], [0xd3, 9], [0xd4, 9], [0xd5, 9],
+      [0xd6, 9], [0xd7, 9], [0xd8, 9], [0xd9, 9], [0xda, 9], [0xdb, 9], [0x98, 9], [0x99, 9],
+      [0x9a, 9], [0x18, 6], [0x9b, 9],
+      ...CCITT_EXT_MAKE
+    ];
+    const CCITT_B_TERM = [
+      [0x37, 10], [0x2, 3], [0x3, 2], [0x2, 2], [0x3, 3], [0x3, 4], [0x2, 4], [0x3, 5],
+      [0x5, 6], [0x4, 6], [0x4, 7], [0x5, 7], [0x7, 7], [0x4, 8], [0x7, 8], [0x18, 9],
+      [0x17, 10], [0x18, 10], [0x8, 10], [0x67, 11], [0x68, 11], [0x6c, 11], [0x37, 11], [0x28, 11],
+      [0x17, 11], [0x18, 11], [0xca, 12], [0xcb, 12], [0xcc, 12], [0xcd, 12], [0x68, 12], [0x69, 12],
+      [0x6a, 12], [0x6b, 12], [0xd2, 12], [0xd3, 12], [0xd4, 12], [0xd5, 12], [0xd6, 12], [0xd7, 12],
+      [0x6c, 12], [0x6d, 12], [0xda, 12], [0xdb, 12], [0x54, 12], [0x55, 12], [0x56, 12], [0x57, 12],
+      [0x64, 12], [0x65, 12], [0x52, 12], [0x53, 12], [0x24, 12], [0x37, 12], [0x38, 12], [0x27, 12],
+      [0x28, 12], [0x58, 12], [0x59, 12], [0x2b, 12], [0x2c, 12], [0x5a, 12], [0x66, 12], [0x67, 12]
+    ];
+    const CCITT_B_MAKE = [
+      [0xf, 10], [0xc8, 12], [0xc9, 12], [0x5b, 12], [0x33, 12], [0x34, 12], [0x35, 12], [0x6c, 13],
+      [0x6d, 13], [0x4a, 13], [0x4b, 13], [0x4c, 13], [0x4d, 13], [0x72, 13], [0x73, 13], [0x74, 13],
+      [0x75, 13], [0x76, 13], [0x77, 13], [0x52, 13], [0x53, 13], [0x54, 13], [0x55, 13], [0x5a, 13],
+      [0x5b, 13], [0x64, 13], [0x65, 13],
+      ...CCITT_EXT_MAKE
+    ];
+
+    class CcittBitWriter {
+      constructor() {
+        this.buffer = new Uint8Array(1024 * 1024);
+        this.bytePos = 0;
+        this.bitPos = 0;
+      }
+      ensure(bytes) {
+        if (this.bytePos + bytes >= this.buffer.length) {
+          const next = new Uint8Array(this.buffer.length * 2);
+          next.set(this.buffer);
+          this.buffer = next;
+        }
+      }
+      writeBits(code, len) {
+        this.ensure(4);
+        for (let i = len - 1; i >= 0; i--) {
+          const bit = (code >>> i) & 1;
+          if (bit) {
+            this.buffer[this.bytePos] |= (1 << (7 - this.bitPos));
+          }
+          this.bitPos++;
+          if (this.bitPos === 8) {
+            this.bitPos = 0;
+            this.bytePos++;
+          }
+        }
+      }
+      getBytes() {
+        let len = this.bytePos;
+        if (this.bitPos > 0) len++;
+        return this.buffer.subarray(0, len);
+      }
+    }
+
+    function ccittEncodeRun(bw, length, isWhite) {
+      const termTable = isWhite ? CCITT_W_TERM : CCITT_B_TERM;
+      const makeTable = isWhite ? CCITT_W_MAKE : CCITT_B_MAKE;
+      while (length >= 2560) {
+        bw.writeBits(0x1F, 12);
+        length -= 2560;
+      }
+      if (length >= 64) {
+        const makeupIdx = Math.floor(length / 64) - 1;
+        const entry = makeTable[makeupIdx];
+        if (entry) {
+          bw.writeBits(entry[0], entry[1]);
+        }
+        length %= 64;
+      }
+      const termEntry = termTable[length];
+      if (termEntry) {
+        bw.writeBits(termEntry[0], termEntry[1]);
+      }
+    }
+
+    function ccittGetTransitions(rowBits, width) {
+      const transitions = [];
+      let prevColor = 1;
+      for (let x = 0; x < width; x++) {
+        const byteIdx = x >> 3;
+        const bitIdx = 7 - (x & 7);
+        const color = (rowBits[byteIdx] >> bitIdx) & 1;
+        if (color !== prevColor) {
+          transitions.push(x);
+          prevColor = color;
+        }
+      }
+      transitions.push(width);
+      return transitions;
+    }
+
+    function ccittFindB1B2(refTransitions, a0, a0Color, width) {
+      const targetColor = (a0Color === 1) ? 0 : 1;
+      let b1 = width;
+      let b2 = width;
+      let b1Idx = -1;
+
+      for (let i = 0; i < refTransitions.length; i++) {
+        const pos = refTransitions[i];
+        const col = (i % 2 === 0) ? 0 : 1;
+        if (pos > a0 && col === targetColor) {
+          b1 = pos;
+          b1Idx = i;
+          break;
+        }
+      }
+
+      if (b1Idx !== -1 && b1Idx + 1 < refTransitions.length) {
+        b2 = refTransitions[b1Idx + 1];
+      }
+      return [b1, b2];
+    }
+
+    function encodeCCITTG4(bitData, width, height) {
+      const rowBytesLen = (width + 7) >> 3;
+      const bw = new CcittBitWriter();
+      let refTransitions = [width];
+
+      for (let y = 0; y < height; y++) {
+        const curRowBits = bitData.subarray(y * rowBytesLen, (y + 1) * rowBytesLen);
+        const curTransitions = ccittGetTransitions(curRowBits, width);
+
+        let a0 = -1;
+        let a0Color = 1;
+        let curIdx = 0;
+
+        while (a0 < width) {
+          while (curIdx < curTransitions.length && curTransitions[curIdx] <= a0) {
+            curIdx++;
+          }
+          const a1 = (curIdx < curTransitions.length) ? curTransitions[curIdx] : width;
+          const a2 = (curIdx + 1 < curTransitions.length) ? curTransitions[curIdx + 1] : width;
+
+          const [b1, b2] = ccittFindB1B2(refTransitions, a0, a0Color, width);
+
+          if (b2 < a1) {
+            bw.writeBits(0x0001, 4);
+            a0 = b2;
+          } else {
+            const diff = a1 - b1;
+            if (diff >= -3 && diff <= 3) {
+              if (diff === 0) bw.writeBits(1, 1);
+              else if (diff === 1) bw.writeBits(0x3, 3);
+              else if (diff === 2) bw.writeBits(0x3, 6);
+              else if (diff === 3) bw.writeBits(0x3, 7);
+              else if (diff === -1) bw.writeBits(0x2, 3);
+              else if (diff === -2) bw.writeBits(0x2, 6);
+              else if (diff === -3) bw.writeBits(0x2, 7);
+
+              a0 = a1;
+              a0Color = (a0Color === 1) ? 0 : 1;
+            } else {
+              bw.writeBits(0x1, 3);
+              const start = (a0 === -1) ? 0 : a0;
+              ccittEncodeRun(bw, a1 - start, a0Color === 1);
+              ccittEncodeRun(bw, a2 - a1, a0Color === 0);
+              a0 = a2;
+            }
+          }
+        }
+        refTransitions = curTransitions;
+      }
+
+      // EOFB
+      bw.writeBits(0x001, 12);
+      bw.writeBits(0x001, 12);
+      return bw.getBytes();
+    }
+
+    function canvasTo1BitCcitt(canvas, threshold = 140) {
+      const w = canvas.width;
+      const h = canvas.height;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const data = imgData.data;
+      const rowBytesLen = (w + 7) >> 3;
+      const bitData = new Uint8Array(rowBytesLen * h);
+
+      let ptr = 0;
+      for (let y = 0; y < h; y++) {
+        let byteVal = 0;
+        let bitCount = 0;
+        let byteIdx = y * rowBytesLen;
+        for (let x = 0; x < w; x++) {
+          const gray = 0.299 * data[ptr] + 0.587 * data[ptr + 1] + 0.114 * data[ptr + 2];
+          ptr += 4;
+          if (gray >= threshold) {
+            byteVal |= (1 << (7 - bitCount));
+          }
+          bitCount++;
+          if (bitCount === 8) {
+            bitData[byteIdx++] = byteVal;
+            byteVal = 0;
+            bitCount = 0;
+          }
+        }
+        if (bitCount > 0) {
+          bitData[byteIdx] = byteVal;
+        }
+      }
+      return { bitData, width: w, height: h, w, h };
+    }
+
+    function appendCcittG4Page(pdfDoc, bitData, w, h, pw, ph, keyIndex = 1) {
+      const g4Data = encodeCCITTG4(bitData, w, h);
+      const imageStream = pdfDoc.context.stream(g4Data, {
+        Type: 'XObject',
+        Subtype: 'Image',
+        Width: w,
+        Height: h,
+        BitsPerComponent: 1,
+        ColorSpace: 'DeviceGray',
+        Filter: 'CCITTFaxDecode',
+        DecodeParms: {
+          K: -1,
+          Columns: w,
+          Rows: h,
+          BlackIs1: false
+        }
+      });
+      const imageRef = pdfDoc.context.register(imageStream);
+      const page = pdfDoc.addPage([pw, ph]);
+      const imgKey = 'Im' + keyIndex;
+
+      page.node.set(PDFLib.PDFName.of('Resources'), pdfDoc.context.obj({
+        XObject: { [imgKey]: imageRef }
+      }));
+
+      const contentOps = 'q ' + pw + ' 0 0 ' + ph + ' 0 0 cm /' + imgKey + ' Do Q';
+      const contentStream = pdfDoc.context.stream(contentOps);
+      const contentRef = pdfDoc.context.register(contentStream);
+      page.node.set(PDFLib.PDFName.of('Contents'), contentRef);
+      return page;
+    }
+
+    /* ==========================================================================
+       MASTER STUDIO ENGINE (Evrak & Belge Stüdyosu Motoru - v2 Gelişmiş)
+       ========================================================================== */
+    let masterFiles = [];
+    let masterPages = [];
+    let fileIdCounter = 0;
+    let pageIdCounter = 0;
+    let lastSelectedPageIndex = -1;
+    let dragSourceIndex = -1;
+    let currentStage = 'none';
+
+    function onQuickModeChange() {
+      const mode = document.querySelector('input[name="quick-merge-mode"]:checked')?.value || 'orig';
+      const langSel = document.getElementById('quick-ocr-lang');
+      if (langSel) {
+        langSel.style.display = (mode === 'ocr') ? 'inline-block' : 'none';
+      }
+    }
+
+    function handleStudioAddFiles(files) {
+      if (!files || files.length === 0) return;
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const isPdf = f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf');
+        const isImg = f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp|bmp|gif)$/i.test(f.name);
+        if (isPdf || isImg) {
+          masterFiles.push({
+            id: 'f_' + (++fileIdCounter),
+            file: f,
+            name: f.name,
+            size: f.size,
+            type: isPdf ? 'pdf' : 'image',
+            meta: { pageCount: null, textLayerPages: [], hasTextLayer: null, status: 'added' }
+          });
+        }
+      }
+
+      const finput = document.getElementById('studio-file-input');
+      if (finput) finput.value = '';
+      const cinput = document.getElementById('studio-camera-input');
+      if (cinput) cinput.value = '';
+
+      // PDF dosyaları için anlık metadata analizi (render beklemeden)
+      masterFiles.filter(f => f.meta && f.meta.status === 'added' && f.type === 'pdf')
+        .forEach(f => analyzeFileMetadata(f));
+
+      if (currentStage === 'pages') {
+        generateStudioThumbnails(true);
+      } else {
+        currentStage = 'files';
+        document.getElementById('stage-files').style.display = 'block';
+        document.getElementById('stage-pages').style.display = 'none';
+        renderStudioFileList();
+      }
+    }
+
+    // Anlık Metadata Analizi — render gerekmez, ~100-300ms
+    async function analyzeFileMetadata(fObj) {
+      if (!fObj || fObj.type !== 'pdf' || !fObj.meta) return;
+      fObj.meta.status = 'analyzing';
+      try {
+        const data = await fObj.file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: data.slice(0) }).promise;
+        fObj.meta.pageCount = pdf.numPages;
+        fObj.meta.textLayerPages = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const pg = await pdf.getPage(i);
+          const tc = await pg.getTextContent();
+          const chars = tc.items.reduce((s, it) => s + (it.str || '').length, 0);
+          if (chars > 10) fObj.meta.textLayerPages.push(i);
+        }
+        fObj.meta.hasTextLayer = fObj.meta.textLayerPages.length > 0;
+        fObj.meta.status = 'ready';
+      } catch (e) {
+        fObj.meta.status = 'error';
+      }
+      // UI'yı güncelle (dosya listesi görünüyorsa)
+      if (currentStage === 'files') renderStudioFileList();
+    }
+
+    function renderStudioFileList() {
+      const listEl = document.getElementById('studio-file-list');
+      const titleEl = document.getElementById('stage-files-title');
+      if (!listEl) return;
+      listEl.innerHTML = '';
+      if (titleEl) titleEl.innerText = `📂 Eklenen Dosyalar (${masterFiles.length})`;
+
+      if (masterFiles.length === 0) {
+        document.getElementById('stage-files').style.display = 'none';
+        currentStage = 'none';
+        return;
+      }
+
+      masterFiles.forEach((fObj, index) => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        const sizeStr = fObj.size > 1048576 
+          ? (fObj.size / 1048576).toFixed(1) + ' MB' 
+          : (fObj.size / 1024).toFixed(1) + ' KB';
+        const icon = fObj.type === 'pdf' ? '📄' : '🖼️';
+
+        // Metadata bilgisi oluştur
+        let metaLine = '';
+        if (fObj.type === 'pdf' && fObj.meta) {
+          const m = fObj.meta;
+          if (m.status === 'analyzing') {
+            metaLine = '<span style="font-size:0.75rem; color:var(--text-muted);">⏳ analiz ediliyor...</span>';
+          } else if (m.status === 'ready' && m.pageCount !== null) {
+            const ocrInfo = m.hasTextLayer
+              ? `<span style="color:#10b981; font-weight:600;">✅ OCR: ${m.textLayerPages.length}/${m.pageCount} sayfada</span>`
+              : `<span style="color:var(--text-muted);">❌ OCR yok</span>`;
+            metaLine = `<span style="font-size:0.75rem;">${m.pageCount} sayfa &nbsp;|&nbsp; ${ocrInfo}</span>`;
+          }
+        } else if (fObj.type === 'image') {
+          metaLine = '<span style="font-size:0.75rem; color:var(--text-muted);">Görsel</span>';
+        }
+
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:0.5rem; overflow:hidden;">
+            <span style="font-size:1.2rem;">${icon}</span>
+            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+              <strong>${index + 1}. ${escapeHtml(fObj.name)}</strong>
+              <span style="font-size:0.8rem; color:var(--text-muted); margin-left:0.5rem;">(${sizeStr})</span>
+              <div style="margin-top:0.15rem;">${metaLine}</div>
+            </div>
+          </div>
+          <div class="file-actions">
+            <button class="btn-icon" title="Yukarı Taşı" onclick="moveStudioFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>▲</button>
+            <button class="btn-icon" title="Aşağı Taşı" onclick="moveStudioFile(${index}, 1)" ${index === masterFiles.length - 1 ? 'disabled' : ''}>▼</button>
+            <button class="btn-icon" title="Sil" onclick="removeStudioFile(${index})" style="color:#ef4444;">🗑️</button>
+          </div>
+        `;
+        listEl.appendChild(item);
+      });
+    }
+
+    function moveStudioFile(index, dir) {
+      const target = index + dir;
+      if (target < 0 || target >= masterFiles.length) return;
+      const temp = masterFiles[index];
+      masterFiles[index] = masterFiles[target];
+      masterFiles[target] = temp;
+      renderStudioFileList();
+    }
+
+    function removeStudioFile(index) {
+      masterFiles.splice(index, 1);
+      renderStudioFileList();
+    }
+
+    function clearStudioAll() {
+      masterFiles = [];
+      masterPages = [];
+      currentStage = 'none';
+      document.getElementById('stage-files').style.display = 'none';
+      document.getElementById('stage-pages').style.display = 'none';
+      document.getElementById('studio-status').style.display = 'none';
+      document.getElementById('studio-ocr-result').style.display = 'none';
+    }
+
+    function backToFilesStage() {
+      currentStage = 'files';
+      document.getElementById('stage-pages').style.display = 'none';
+      document.getElementById('stage-files').style.display = 'block';
+      renderStudioFileList();
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    /* KADEME 1: HIZLI BİRLEŞTİRME & EFEKT MOTORU (STREAM PIPELINE) */
+            async function quickExportFiles(format = 'pdf-single') {
+      if (masterFiles.length === 0) {
+        alert('Lütfen önce dosya ekleyin.');
+        return;
+      }
+      const mode = document.querySelector('input[name="quick-merge-mode"]:checked')?.value || 'orig';
+      const ocrLang = document.getElementById('quick-ocr-lang')?.value || 'tur+eng';
+      showStatus('studio-status', `Dosyalar işleniyor (${format} - ${mode})... Lütfen bekleyin.`, 'info');
+
+      try {
+        let zip = null;
+        let mergedPdf = null;
+        if (format === 'pdf-single') {
+          mergedPdf = await PDFLib.PDFDocument.create();
+        } else {
+          await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+          zip = new JSZip();
+        }
+
+        let ocrFullText = '';
+        let tesseractWorker = null;
+
+        if (mode === 'ocr') {
+          showStatus('studio-status', 'OCR motoru (Tesseract) yükleniyor...', 'info');
+          await loadExternalScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+          tesseractWorker = await Tesseract.createWorker(ocrLang);
+        }
+
+        let globalPageCounter = 1;
+
+        // Tekrarsız Raster Sayfa İşleme Hattı
+        async function processRasterPage(pageCanvas, pageName) {
+          if (format === 'pdf-single' || format === 'pdf-zip') {
+            if (mode === 'ccitt') {
+              const { bitData, width, height } = canvasTo1BitCcitt(pageCanvas, 140);
+              const a4Width = 595.28;
+              const a4Height = Math.round(a4Width * (height / width));
+
+              if (format === 'pdf-single') {
+                appendCcittG4Page(mergedPdf, bitData, width, height, a4Width, a4Height, globalPageCounter++);
+              } else {
+                const singleDoc = await PDFLib.PDFDocument.create();
+                appendCcittG4Page(singleDoc, bitData, width, height, a4Width, a4Height, 1);
+                const pBytes = await singleDoc.save();
+                zip.file(`${pageName}.pdf`, pBytes);
+              }
+            } else {
+              if (mode === 'magic' || mode === 'bw') {
+                applyFilterToCanvas(pageCanvas, mode);
+              }
+              if (mode === 'ocr' && tesseractWorker) {
+                const res = await tesseractWorker.recognize(pageCanvas);
+                ocrFullText += `--- ${pageName} ---\n${res.data.text.trim()}\n\n`;
+              }
+              const imgBytes = await fetch(pageCanvas.toDataURL('image/jpeg', 0.88)).then(r => r.arrayBuffer());
+              const a4Width = 595.28;
+              const s = a4Width / pageCanvas.width;
+              const pw = a4Width;
+              const ph = pageCanvas.height * s;
+
+              if (format === 'pdf-single') {
+                const embedded = await mergedPdf.embedJpg(imgBytes);
+                const pdfPage = mergedPdf.addPage([pw, ph]);
+                pdfPage.drawImage(embedded, { x: 0, y: 0, width: pw, height: ph });
+              } else {
+                const singleDoc = await PDFLib.PDFDocument.create();
+                const embedded = await singleDoc.embedJpg(imgBytes);
+                const pdfPage = singleDoc.addPage([pw, ph]);
+                pdfPage.drawImage(embedded, { x: 0, y: 0, width: pw, height: ph });
+                const pBytes = await singleDoc.save();
+                zip.file(`${pageName}.pdf`, pBytes);
+              }
+            }
+          } else {
+            // format === 'jpg-zip' || format === 'png-zip'
+            const isPng = format === 'png-zip';
+            const ext = isPng ? 'png' : 'jpg';
+            const mime = isPng ? 'image/png' : 'image/jpeg';
+            if (mode === 'magic' || mode === 'bw') {
+              applyFilterToCanvas(pageCanvas, mode);
+            } else if (mode === 'ccitt') {
+              applyFilterToCanvas(pageCanvas, 'bw');
+            }
+            if (mode === 'ocr' && tesseractWorker) {
+              const res = await tesseractWorker.recognize(pageCanvas);
+              ocrFullText += `--- ${pageName} ---\n${res.data.text.trim()}\n\n`;
+            }
+            const dataUrl = pageCanvas.toDataURL(mime, isPng ? undefined : 0.90);
+            const b64 = dataUrl.split(',')[1];
+            zip.file(`${pageName}.${ext}`, b64, { base64: true });
+          }
+          pageCanvas.width = 0; pageCanvas.height = 0;
+        }
+
+        for (let fIdx = 0; fIdx < masterFiles.length; fIdx++) {
+          const fObj = masterFiles[fIdx];
+          const baseName = fObj.name.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_\-\u00C0-\u017F]/g, '_') || `dosya_${fIdx + 1}`;
+          showStatus('studio-status', `Dosya işleniyor (${fIdx + 1} / ${masterFiles.length}): ${fObj.name}...`, 'info');
+
+          if (fObj.type === 'pdf') {
+            const fileBytes = await fObj.file.arrayBuffer();
+
+            if (mode === 'orig' && format === 'pdf-single') {
+              const srcDoc = await PDFLib.PDFDocument.load(fileBytes.slice(0), { ignoreEncryption: true });
+              const copied = await mergedPdf.copyPages(srcDoc, srcDoc.getPageIndices());
+              copied.forEach(p => mergedPdf.addPage(p));
+            } else if (mode === 'orig' && format === 'pdf-zip') {
+              const srcDoc = await PDFLib.PDFDocument.load(fileBytes.slice(0), { ignoreEncryption: true });
+              const pageIndices = srcDoc.getPageIndices();
+              for (let pIdx = 0; pIdx < pageIndices.length; pIdx++) {
+                const singleDoc = await PDFLib.PDFDocument.create();
+                const [cp] = await singleDoc.copyPages(srcDoc, [pIdx]);
+                singleDoc.addPage(cp);
+                const pBytes = await singleDoc.save();
+                const pName = pageIndices.length > 1 ? `${baseName}_sayfa_${pIdx + 1}.pdf` : `${baseName}.pdf`;
+                zip.file(pName, pBytes);
+              }
+            } else {
+              const pdf = await pdfjsLib.getDocument({ data: fileBytes.slice(0) }).promise;
+              for (let pNum = 1; pNum <= pdf.numPages; pNum++) {
+                showStatus('studio-status', `${fObj.name} - Sayfa ${pNum} / ${pdf.numPages} işleniyor...`, 'info');
+                const page = await pdf.getPage(pNum);
+                const pName = pdf.numPages > 1 ? `${baseName}_sayfa_${pNum}` : baseName;
+
+                let pageCanvas;
+                if (mode === 'ccitt') {
+                  const vp = page.getViewport({ scale: 1.0 });
+                  const targetScale = Math.min(300 / 72, 2400 / vp.width);
+                  const res = await renderPdfPageToCanvas(page, targetScale);
+                  pageCanvas = res.canvas;
+                } else {
+                  const res = await renderPdfPageToCanvas(page, 2.0);
+                  pageCanvas = res.canvas;
+                }
+                await processRasterPage(pageCanvas, pName);
+              }
+            }
+          } else {
+            // Görsel dosyası (JPG / PNG)
+            const imgBytes = await fObj.file.arrayBuffer();
+            const isOriginalPng = fObj.file.type === 'image/png' || fObj.name.toLowerCase().endsWith('.png');
+
+            if (mode === 'orig') {
+              const doc = (format === 'pdf-single') ? mergedPdf : (await PDFLib.PDFDocument.create());
+              const embedded = isOriginalPng ? (await doc.embedPng(imgBytes)) : (await doc.embedJpg(imgBytes));
+              const imgDims = embedded.scale(1);
+              const a4Width = 595.28;
+              const scaleFactor = Math.min(a4Width / imgDims.width, 1.0);
+              const pw = imgDims.width * scaleFactor;
+              const ph = imgDims.height * scaleFactor;
+              const page = doc.addPage([pw, ph]);
+              page.drawImage(embedded, { x: 0, y: 0, width: pw, height: ph });
+
+              if (format === 'pdf-zip') {
+                const pBytes = await doc.save();
+                zip.file(`${baseName}.pdf`, pBytes);
+              }
+            } else {
+              const imgUrl = URL.createObjectURL(fObj.file);
+              const img = new Image();
+              await new Promise((res, rej) => {
+                img.onload = res; img.onerror = rej; img.src = imgUrl;
+              });
+              URL.revokeObjectURL(imgUrl);
+
+              const canvas = document.createElement('canvas');
+              const maxDim = mode === 'ccitt' ? 2400 : 1800;
+              const scale = Math.min(maxDim / Math.max(img.width, img.height), 1.0);
+              canvas.width = Math.round(img.width * scale);
+              canvas.height = Math.round(img.height * scale);
+              canvas.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, canvas.width, canvas.height);
+
+              await processRasterPage(canvas, baseName);
+            }
+          }
+        }
+
+        if (tesseractWorker) {
+          await tesseractWorker.terminate();
+          if (ocrFullText) {
+            const ocrSection = document.getElementById('studio-ocr-result');
+            const ocrTextarea = document.getElementById('studio-ocr-textarea');
+            if (ocrSection && ocrTextarea) {
+              ocrTextarea.value = ocrFullText;
+              ocrSection.style.display = 'block';
+            }
+          }
+        }
+
+        if (format === 'pdf-single') {
+          const pdfBytes = await mergedPdf.save();
+          downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), 'birlesik_belge.pdf');
+          showStatus('studio-status', '✅ PDF başarıyla birleştirildi ve indirildi!', 'success');
+        } else {
+          showStatus('studio-status', 'ZIP arşivi oluşturuluyor...', 'info');
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          const zipName = format === 'pdf-zip' ? 'ayri_belgeler_pdf.zip' : (format === 'png-zip' ? 'ayri_sayfalar_png.zip' : 'ayri_sayfalar_jpg.zip');
+          downloadBlob(zipBlob, zipName);
+          showStatus('studio-status', `✅ ${zipName} başarıyla indirildi!`, 'success');
+        }
+      } catch (err) {
+        console.error(err);
+        showStatus('studio-status', 'Dışa aktarma hatası: ' + getUserFriendlyError(err), 'error');
+      }
+    }
+    const quickMergeFiles = () => quickExportFiles('pdf-single');
+
+    /* KADEME 2: SAYFA ÖNİZLEME & DÜZENLEME */
+    async function generateStudioThumbnails(appendOnly = false) {
+      if (masterFiles.length === 0) return;
+
+      currentStage = 'pages';
+      document.getElementById('stage-files').style.display = 'none';
+      document.getElementById('stage-pages').style.display = 'block';
+      showStatus('studio-status', 'Sayfa önizlemeleri hazırlanıyor... Lütfen bekleyin.', 'info');
+
+      if (!appendOnly) {
+        masterPages = [];
+      }
+
+      const processedFileIds = new Set(masterPages.map(p => p.fileId));
+      const filesToProcess = masterFiles.filter(f => !processedFileIds.has(f.id));
+
+      try {
+        for (let fObj of filesToProcess) {
+          if (fObj.type === 'pdf') {
+            const fileData = await fObj.file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: fileData.slice(0) }).promise;
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const vpOrig = page.getViewport({ scale: 1.0 });
+              const thumbScale = Math.min(260 / vpOrig.width, 1.0);
+              const vp = page.getViewport({ scale: thumbScale });
+              const thumbCanvas = document.createElement('canvas');
+              thumbCanvas.width = Math.round(vp.width);
+              thumbCanvas.height = Math.round(vp.height);
+              await page.render({ canvasContext: thumbCanvas.getContext('2d', { willReadFrequently: true }), viewport: vp }).promise;
+
+              // Bozulmayan orijinal temiz kopya (Non-destructive)
+              const cleanThumb = document.createElement('canvas');
+              cleanThumb.width = thumbCanvas.width;
+              cleanThumb.height = thumbCanvas.height;
+              cleanThumb.getContext('2d', { willReadFrequently: true }).drawImage(thumbCanvas, 0, 0);
+
+              // Renk tespiti (thumbnail üzerinde) + OCR bilgisi (dosya meta'dan)
+              const isColorPage = detectPageColor(thumbCanvas);
+              const ocrPages = (fObj.meta && fObj.meta.textLayerPages) ? fObj.meta.textLayerPages : [];
+              const pageHasOcr = ocrPages.includes(i);
+
+              masterPages.push({
+                id: 'p_' + (++pageIdCounter),
+                fileId: fObj.id,
+                fileName: fObj.name,
+                pageIndex: i,
+                totalPages: pdf.numPages,
+                rotation: 0,
+                selected: true,
+                thumbCanvas: thumbCanvas,
+                cleanThumbCanvas: cleanThumb,
+                fullCanvas: null,
+                cleanFullCanvas: null,
+                pdfPage: page,
+                pdfSrcDoc: pdf,
+                imageObj: null,
+                filter: 'none',
+                isCcitt: false,
+                info: { isColor: isColorPage, hasOcr: pageHasOcr, ocrCharCount: 0, status: 'ready' }
+              });
+            }
+          } else {
+            const imgUrl = URL.createObjectURL(fObj.file);
+            const img = new Image();
+            await new Promise((res, rej) => {
+              img.onload = res;
+              img.onerror = rej;
+              img.src = imgUrl;
+            });
+
+            const thumbScale = Math.min(260 / img.width, 1.0);
+            const tw = Math.round(img.width * thumbScale);
+            const th = Math.round(img.height * thumbScale);
+            const thumbCanvas = document.createElement('canvas');
+            thumbCanvas.width = tw;
+            thumbCanvas.height = th;
+            thumbCanvas.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, tw, th);
+
+            const cleanThumb = document.createElement('canvas');
+            cleanThumb.width = tw;
+            cleanThumb.height = th;
+            cleanThumb.getContext('2d', { willReadFrequently: true }).drawImage(thumbCanvas, 0, 0);
+
+            masterPages.push({
+              id: 'p_' + (++pageIdCounter),
+              fileId: fObj.id,
+              fileName: fObj.name,
+              pageIndex: 1,
+              totalPages: 1,
+              rotation: 0,
+              selected: true,
+              thumbCanvas: thumbCanvas,
+              cleanThumbCanvas: cleanThumb,
+              fullCanvas: null,
+              cleanFullCanvas: null,
+              pdfPage: null,
+              pdfSrcDoc: null,
+              imageObj: img,
+              filter: 'none',
+              isCcitt: false,
+              info: { isColor: detectPageColor(thumbCanvas), hasOcr: false, ocrCharCount: 0, status: 'ready' }
+            });
+          }
+        }
+
+        showStatus('studio-status', `✅ Toplam ${masterPages.length} sayfa hazırlandı!`, 'info');
+        renderStudioPageGrid();
+      } catch (err) {
+        console.error(err);
+        showStatus('studio-status', 'Önizleme oluşturma hatası: ' + getUserFriendlyError(err), 'error');
+      }
+    }
+
+    function renderStudioPageGrid() {
+      const grid = document.getElementById('studio-page-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const statsEl = document.getElementById('studio-page-stats');
+      const selCount = masterPages.filter(p => p.selected).length;
+      if (statsEl) statsEl.innerText = `📑 Toplam ${masterPages.length} Sayfa • (${selCount} Seçili)`;
+
+      const selCountEl = document.getElementById('selected-pages-count');
+      if (selCountEl) selCountEl.innerText = selCount;
+      const selActionBar = document.getElementById('selection-action-bar');
+      if (selActionBar) selActionBar.style.display = selCount > 0 ? 'block' : 'none';
+
+      const expCountEl = document.getElementById('export-page-count');
+      if (expCountEl) expCountEl.innerText = selCount;
+
+      masterPages.forEach((page, index) => {
+        const card = document.createElement('div');
+        card.className = 'studio-page-card' + (page.selected ? ' selected' : '');
+        card.draggable = true;
+
+        let effectBadges = '';
+        if (page.isCcitt) effectBadges += `<span class="badge" style="background:#0284c7; color:#fff; font-size:0.7rem; padding:0.15rem 0.35rem; border-radius:3px;">300 DPI</span> `;
+        if (page.filter === 'magic') effectBadges += `<span class="badge" style="background:#10b981; color:#fff; font-size:0.7rem; padding:0.15rem 0.35rem; border-radius:3px;">Sihirli</span> `;
+        if (page.filter === 'bw') effectBadges += `<span class="badge" style="background:#64748b; color:#fff; font-size:0.7rem; padding:0.15rem 0.35rem; border-radius:3px;">S/B</span> `;
+
+        // Per-page bilgi badge'leri
+        let infoBadges = '';
+        if (page.info) {
+          if (page.info.hasOcr) {
+            infoBadges += `<span title="Bu sayfada OCR metin katmanı var" style="font-size:0.7rem; padding:0.1rem 0.3rem; border-radius:3px; background:rgba(16,185,129,0.15); color:#10b981; border:1px solid rgba(16,185,129,0.3);">✅ OCR</span> `;
+          } else if (page.info.hasOcr === false && page.pdfPage) {
+            infoBadges += `<span title="Bu sayfada OCR katmanı yok" style="font-size:0.7rem; padding:0.1rem 0.3rem; border-radius:3px; background:rgba(100,116,139,0.1); color:var(--text-muted); border:1px solid var(--card-border);">❌ OCR</span> `;
+          }
+          if (page.info.isColor === true) {
+            infoBadges += `<span title="Renkli sayfa" style="font-size:0.7rem; padding:0.1rem 0.3rem; border-radius:3px; background:rgba(251,191,36,0.12); color:#f59e0b; border:1px solid rgba(251,191,36,0.3); font-weight:600;">Renkli</span> `;
+          } else if (page.info.isColor === false) {
+            infoBadges += `<span title="Siyah-beyaz / gri sayfa" style="font-size:0.7rem; padding:0.1rem 0.3rem; border-radius:3px; background:rgba(100,116,139,0.08); color:var(--text-muted); border:1px solid var(--card-border); font-weight:600;">S/B</span> `;
+          }
+        }
+
+        card.innerHTML = `
+          <div class="studio-page-card-header">
+            <label style="display:inline-flex; align-items:center; gap:0.3rem; cursor:pointer;" onclick="event.stopPropagation()">
+              <input type="checkbox" ${page.selected ? 'checked' : ''} onchange="onCheckboxChange(${index}, event)">
+              <strong style="font-size:0.85rem;">#${index + 1}</strong>
+            </label>
+            <div style="font-size:0.75rem; color:var(--text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:90px;" title="${escapeHtml(page.fileName)}">
+              ${escapeHtml(page.fileName)}
+            </div>
+          </div>
+
+          <div class="studio-page-thumb-wrap" style="position:relative;" onclick="togglePageSelection(${index}, event)">
+            <div style="position:absolute; top:4px; left:4px; z-index:2;">${effectBadges}</div>
+            <div class="thumb-canvas-container" style="transform: rotate(${page.rotation}deg); transition: transform 0.15s ease;">
+            </div>
+            ${infoBadges ? `<div style="position:absolute; bottom:4px; left:4px; z-index:2; display:flex; gap:2px; flex-wrap:wrap;">${infoBadges}</div>` : ''}
+          </div>
+
+          <div class="studio-page-card-footer" onclick="event.stopPropagation()">
+            <button class="btn-icon" title="Sola Taşı" onclick="moveStudioPage(${index}, -1)" ${index === 0 ? 'disabled' : ''}>◀</button>
+            <button class="btn-icon" title="Sağa Taşı" onclick="moveStudioPage(${index}, 1)" ${index === masterPages.length - 1 ? 'disabled' : ''}>▶</button>
+            <button class="btn-icon" title="90° Döndür" onclick="rotatePage(${index}, 90)">↻</button>
+            <button class="btn-secondary" title="Köşe & Leke Düzenle" onclick="openStudioEditor(${index})" style="padding:0.25rem 0.45rem; font-size:0.75rem;">
+              ✏️ İnce Ayar
+            </button>
+            <button class="btn-icon" title="Sayfayı Sil" onclick="deletePage(${index})" style="color:#ef4444;">🗑️</button>
+          </div>
+        `;
+
+        const thumbContainer = card.querySelector('.thumb-canvas-container');
+        if (thumbContainer && page.thumbCanvas) {
+          thumbContainer.appendChild(page.thumbCanvas);
+        }
+
+        card.addEventListener('dragstart', (e) => {
+          dragSourceIndex = index;
+          e.dataTransfer.setData('text/plain', index);
+          card.style.opacity = '0.4';
+        });
+        card.addEventListener('dragend', () => {
+          card.style.opacity = '1';
+        });
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+        });
+        card.addEventListener('drop', (e) => {
+          e.preventDefault();
+          if (dragSourceIndex !== -1 && dragSourceIndex !== index) {
+            const moved = masterPages.splice(dragSourceIndex, 1)[0];
+            masterPages.splice(index, 0, moved);
+            renderStudioPageGrid();
+          }
+          dragSourceIndex = -1;
+        });
+
+        grid.appendChild(card);
+      });
+    }
+
+    function onCheckboxChange(index, event) {
+      masterPages[index].selected = event.target.checked;
+      lastSelectedPageIndex = index;
+      renderStudioPageGrid();
+    }
+
+    function togglePageSelection(index, event) {
+      if (event && event.shiftKey && lastSelectedPageIndex !== -1) {
+        const start = Math.min(lastSelectedPageIndex, index);
+        const end = Math.max(lastSelectedPageIndex, index);
+        const targetState = !masterPages[index].selected;
+        for (let i = start; i <= end; i++) {
+          masterPages[i].selected = targetState;
+        }
+      } else {
+        masterPages[index].selected = !masterPages[index].selected;
+        lastSelectedPageIndex = index;
+      }
+      renderStudioPageGrid();
+    }
+
+    function selectPageRange() {
+      const sVal = document.getElementById('studio-range-start')?.value;
+      const eVal = document.getElementById('studio-range-end')?.value;
+      const s = parseInt(sVal, 10);
+      const e = parseInt(eVal, 10);
+      if (isNaN(s) || isNaN(e)) {
+        alert('Lütfen geçerli bir sayfa aralığı girin (örn: 1 - 5)');
+        return;
+      }
+      const from = Math.max(1, Math.min(s, e)) - 1;
+      const to = Math.min(masterPages.length, Math.max(s, e)) - 1;
+      for (let i = 0; i < masterPages.length; i++) {
+        if (i >= from && i <= to) {
+          masterPages[i].selected = true;
+        }
+      }
+      renderStudioPageGrid();
+    }
+
+    function selectAllPages(select) {
+      masterPages.forEach(p => p.selected = select);
+      renderStudioPageGrid();
+    }
+
+    function invertPageSelection() {
+      masterPages.forEach(p => p.selected = !p.selected);
+      renderStudioPageGrid();
+    }
+
+    function deletePage(index) {
+      masterPages.splice(index, 1);
+      renderStudioPageGrid();
+    }
+
+    function deleteSelectedPages() {
+      const selCount = masterPages.filter(p => p.selected).length;
+      if (selCount === 0) return;
+      masterPages = masterPages.filter(p => !p.selected);
+      renderStudioPageGrid();
+    }
+
+    function moveStudioPage(index, dir) {
+      const target = index + dir;
+      if (target < 0 || target >= masterPages.length) return;
+      const temp = masterPages[index];
+      masterPages[index] = masterPages[target];
+      masterPages[target] = temp;
+      renderStudioPageGrid();
+    }
+
+    function rotatePage(index, deg) {
+      masterPages[index].rotation = (masterPages[index].rotation + deg) % 360;
+      renderStudioPageGrid();
+    }
+
+    function batchRotateSelected(deg) {
+      masterPages.forEach(p => {
+        if (p.selected) {
+          p.rotation = (p.rotation + deg) % 360;
+        }
+      });
+      renderStudioPageGrid();
+    }
+
+    /* NON-DESTRUCTIVE FİLTRE MOTORU (Geri Dönüş Hatası Tamamen Çözüldü) */
+    async function batchFilterSelected(filterType) {
+      const selected = masterPages.filter(p => p.selected);
+      if (selected.length === 0) return;
+      showStatus('studio-status', `Seçili ${selected.length} sayfaya filtre uygulanıyor...`, 'info');
+
+      for (let p of selected) {
+        if (filterType === 'orig') {
+          p.filter = 'none';
+          p.isCcitt = false;
+          // Temiz kopyadan geri yükleme
+          if (p.cleanThumbCanvas && p.thumbCanvas) {
+            const ctx = p.thumbCanvas.getContext('2d', { willReadFrequently: true });
+            ctx.clearRect(0, 0, p.thumbCanvas.width, p.thumbCanvas.height);
+            ctx.drawImage(p.cleanThumbCanvas, 0, 0);
+          }
+          if (p.cleanFullCanvas && p.fullCanvas) {
+            const fctx = p.fullCanvas.getContext('2d', { willReadFrequently: true });
+            fctx.clearRect(0, 0, p.fullCanvas.width, p.fullCanvas.height);
+            fctx.drawImage(p.cleanFullCanvas, 0, 0);
+          }
+        } else {
+          p.filter = filterType;
+          if (p.cleanThumbCanvas && p.thumbCanvas) {
+            const ctx = p.thumbCanvas.getContext('2d', { willReadFrequently: true });
+            ctx.clearRect(0, 0, p.thumbCanvas.width, p.thumbCanvas.height);
+            ctx.drawImage(p.cleanThumbCanvas, 0, 0);
+          }
+          applyFilterToCanvas(p.thumbCanvas, filterType);
+        }
+      }
+      renderStudioPageGrid();
+      showStatus('studio-status', `✅ Filtre ${selected.length} sayfaya uygulandı!`, 'info');
+    }
+
+    function applyFilterToCanvas(canvas, filterType) {
+      if (!canvas || filterType === 'orig' || filterType === 'none') return;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const w = canvas.width;
+      const h = canvas.height;
+      const imgData = ctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+
+      if (filterType === 'magic') {
+        for (let i = 0; i < d.length; i += 4) {
+          let r = d[i], g = d[i+1], b = d[i+2];
+          r = Math.min(255, Math.max(0, (r - 128) * 1.35 + 128 + 20));
+          g = Math.min(255, Math.max(0, (g - 128) * 1.35 + 128 + 20));
+          b = Math.min(255, Math.max(0, (b - 128) * 1.35 + 128 + 20));
+          if (r > 190 && g > 190 && b > 190) {
+            r = 255; g = 255; b = 255;
+          }
+          d[i] = r; d[i+1] = g; d[i+2] = b;
+        }
+      } else if (filterType === 'bw') {
+        for (let i = 0; i < d.length; i += 4) {
+          const gray = (d[i] * 299 + d[i+1] * 587 + d[i+2] * 114) / 1000;
+          const v = gray > 140 ? 255 : 0;
+          d[i] = v; d[i+1] = v; d[i+2] = v;
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function batchCcittSelected() {
+      const selected = masterPages.filter(p => p.selected);
+      if (selected.length === 0) return;
+      selected.forEach(p => {
+        p.isCcitt = true;
+        p.filter = 'bw';
+        if (p.cleanThumbCanvas && p.thumbCanvas) {
+          const ctx = p.thumbCanvas.getContext('2d', { willReadFrequently: true });
+          ctx.clearRect(0, 0, p.thumbCanvas.width, p.thumbCanvas.height);
+          ctx.drawImage(p.cleanThumbCanvas, 0, 0);
+        }
+        applyFilterToCanvas(p.thumbCanvas, 'bw');
+      });
+      renderStudioPageGrid();
+      showStatus('studio-status', `✅ Seçili ${selected.length} sayfa 300 DPI Faks (S/B) olarak işaretlendi!`, 'info');
+    }
+
+    // Mevcut PDF text katmanını düz metne çevirir (Tesseract çalıştırmadan)
+    async function extractExistingOcrText(page) {
+      if (!page.pdfPage || !page.pdfSrcDoc) return null;
+      try {
+        const tc = await page.pdfPage.getTextContent();
+        const text = tc.items.map(it => it.str || '').join(' ').trim();
+        return text.length > 5 ? text : null;
+      } catch (_) { return null; }
+    }
+
+    // Kullanıcıya modal olmadan yalın strateji sor (basit confirm)
+    function askOcrStrategy(pagesWithOcr, total) {
+      if (pagesWithOcr === 0) return 'retesseract'; // OCR yok, her zaman yeni tanıma
+      const msg = `Seçili ${total} sayfadan ${pagesWithOcr} tanesinde mevcut OCR metin katmanı var.
+
+` +
+        `Ne yapmak istersiniz?
+
+` +
+        `• "Tamam" → Mevcut OCR metinleri kullan (hızlı)
+` +
+        `• "İptal" → Tüm sayfalarda Tesseract ile yeniden tanı`;
+      return confirm(msg) ? 'existing' : 'retesseract';
+    }
+
+    async function batchOcrSelected() {
+      const selected = masterPages.filter(p => p.selected);
+      if (selected.length === 0) return;
+      const lang = document.getElementById('stage-ocr-lang')?.value || 'tur+eng';
+
+      // OCR Strateji Seçimi: kaç sayfada mevcut text katmanı var?
+      const pagesWithOcr = selected.filter(p => p.info && p.info.hasOcr).length;
+      const strategy = askOcrStrategy(pagesWithOcr, selected.length);
+      // strategy: 'existing' → mevcut katmanı al | 'retesseract' → Tesseract çalıştır
+
+      showStatus('studio-status', `Seçili ${selected.length} sayfaya OCR uygulanıyor... (${lang})`, 'info');
+
+      try {
+        let worker = null;
+        let fullText = '';
+
+        // Tesseract sadece 'retesseract' modunda veya mevcut OCR olmayan sayfalar için yüklenir
+        const needsTesseract = strategy === 'retesseract' ||
+          selected.some(p => !(p.info && p.info.hasOcr));
+        if (needsTesseract) {
+          showStatus('studio-status', 'Tesseract motoru yükleniyor...', 'info');
+          await loadExternalScript('https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js');
+          worker = await Tesseract.createWorker(lang);
+        }
+
+        for (let i = 0; i < selected.length; i++) {
+          const pg = selected[i];
+          showStatus('studio-status', `OCR işleniyor: Sayfa ${i + 1} / ${selected.length}...`, 'info');
+
+          let pageText = null;
+
+          // Mevcut OCR var ve strateji "mevcut kullan"
+          if (strategy === 'existing' && pg.info && pg.info.hasOcr) {
+            pageText = await extractExistingOcrText(pg);
+            if (pageText) {
+              showStatus('studio-status',
+                `Sayfa ${i + 1}: Mevcut OCR kullanıldı.`, 'info');
+            }
+          }
+
+          // Mevcut metin alınamadı veya strateji "yeniden tanı"
+          if (!pageText && worker) {
+            const canvas = await getPageFullCanvas(pg);
+            const res = await worker.recognize(canvas);
+            pageText = res.data.text.trim();
+            // Cache: bilgiyi güncelle
+            if (pg.info) {
+              pg.info.hasOcr = true;
+              pg.info.ocrCharCount = pageText.length;
+            }
+          }
+
+          fullText += `--- Sayfa #${pg.pageIndex} (${pg.fileName}) ---\n${pageText || '(Metin bulunamadı)'}\n\n`;
+        }
+
+        if (worker) await worker.terminate();
+
+        const ocrSection = document.getElementById('studio-ocr-result');
+        const ocrTextarea = document.getElementById('studio-ocr-textarea');
+        if (ocrSection && ocrTextarea) {
+          ocrTextarea.value = fullText;
+          ocrSection.style.display = 'block';
+          ocrSection.scrollIntoView({ behavior: 'smooth' });
+        }
+        showStatus('studio-status', `✅ OCR tamamlandı! (${selected.length} sayfa)`, 'success');
+        renderStudioPageGrid(); // Badge'leri güncelle
+      } catch (err) {
+        console.error(err);
+        showStatus('studio-status', 'OCR hatası: ' + getUserFriendlyError(err), 'error');
+      }
+    }
+
+    function copyStudioOcrText() {
+      const ta = document.getElementById('studio-ocr-textarea');
+      if (ta) {
+        navigator.clipboard.writeText(ta.value);
+        showStatus('studio-status', '📋 OCR metni panoya kopyalandı!', 'info');
+      }
+    }
+
+    function downloadStudioOcrText() {
+      const ta = document.getElementById('studio-ocr-textarea');
+      if (ta && ta.value) {
+        downloadBlob(new Blob([ta.value], { type: 'text/plain;charset=utf-8' }), 'ocr_metin.txt');
+      }
+    }
+
+    async function getPageFullCanvas(page) {
+      if (page.fullCanvas) {
+        if ((page.filter === 'none' || page.filter === 'orig') && page.cleanFullCanvas) {
+          const c = document.createElement('canvas');
+          c.width = page.cleanFullCanvas.width; c.height = page.cleanFullCanvas.height;
+          c.getContext('2d', { willReadFrequently: true }).drawImage(page.cleanFullCanvas, 0, 0);
+          return c;
+        }
+        const c = document.createElement('canvas');
+        c.width = page.fullCanvas.width; c.height = page.fullCanvas.height;
+        c.getContext('2d', { willReadFrequently: true }).drawImage(page.fullCanvas, 0, 0);
+        return c;
+      }
+      if (page.pdfPage) {
+        const { canvas } = await renderPdfPageToCanvas(page.pdfPage, 2.0);
+        return canvas;
+      }
+      if (page.imageObj) {
+        const canvas = document.createElement('canvas');
+        canvas.width = page.imageObj.naturalWidth || page.imageObj.width;
+        canvas.height = page.imageObj.naturalHeight || page.imageObj.height;
+        canvas.getContext('2d', { willReadFrequently: true }).drawImage(page.imageObj, 0, 0);
+        return canvas;
+      }
+      return page.thumbCanvas;
+    }
+
+    /* DIŞA AKTARMA VE VEKTÖREL DÖNDÜRME KORUMASI */
+    async function exportPages(format) {
+      const selected = masterPages.filter(p => p.selected);
+      if (selected.length === 0) {
+        alert('Lütfen dışa aktarmak için en az bir sayfa seçin.');
+        return;
+      }
+
+      showStatus('studio-status', `Dışa aktarılıyor (${format})... Lütfen bekleyin.`, 'info');
+
+      try {
+        const srcDocCache = {};
+        async function getSrcDoc(fileId) {
+          if (!srcDocCache[fileId]) {
+            const f = masterFiles.find(mf => mf.id === fileId);
+            if (f && f.file) {
+              const bytes = await f.file.arrayBuffer();
+              srcDocCache[fileId] = await PDFLib.PDFDocument.load(bytes.slice(0), { ignoreEncryption: true });
+            }
+          }
+          return srcDocCache[fileId];
+        }
+
+        if (format === 'pdf-single') {
+          const pdfDoc = await PDFLib.PDFDocument.create();
+          for (let i = 0; i < selected.length; i++) {
+            const p = selected[i];
+            showStatus('studio-status', `PDF sayfası ekleniyor: ${i + 1} / ${selected.length}...`, 'info');
+
+            // Vektörel PDF Koruması: Kullanıcı filtre/ince ayar yapmadıysa kayıpsız vektör olarak kopyala
+            if (p.pdfPage && !p.fullCanvas && (p.filter === 'none' || p.filter === 'orig') && !p.isCcitt) {
+              const srcDoc = await getSrcDoc(p.fileId);
+              if (srcDoc) {
+                const [copiedPage] = await pdfDoc.copyPages(srcDoc, [p.pageIndex - 1]);
+                if (p.rotation !== 0) {
+                  const curRot = copiedPage.getRotation().angle;
+                  copiedPage.setRotation(PDFLib.degrees((curRot + p.rotation) % 360));
+                }
+                pdfDoc.addPage(copiedPage);
+                continue;
+              }
+            }
+
+            const canvas = await getPageFullCanvas(p);
+
+            if (p.isCcitt) {
+              const { bitData, width, height } = canvasTo1BitCcitt(canvas, 140);
+              const a4Width = 595.28;
+              const a4Height = Math.round(a4Width * (height / width));
+              appendCcittG4Page(pdfDoc, bitData, width, height, a4Width, a4Height, i + 1);
+            } else {
+              let targetCanvas = canvas;
+              if (p.rotation !== 0) {
+                targetCanvas = rotateCanvas(canvas, p.rotation);
+              }
+              if (p.filter !== 'none' && p.filter !== 'orig') {
+                applyFilterToCanvas(targetCanvas, p.filter);
+              }
+              const imgBytes = await fetch(targetCanvas.toDataURL('image/jpeg', 0.9)).then(r => r.arrayBuffer());
+              const embedded = await pdfDoc.embedJpg(imgBytes);
+              const a4Width = 595.28;
+              const scale = a4Width / targetCanvas.width;
+              const pw = a4Width;
+              const ph = targetCanvas.height * scale;
+              const pdfPage = pdfDoc.addPage([pw, ph]);
+              pdfPage.drawImage(embedded, { x: 0, y: 0, width: pw, height: ph });
+            }
+          }
+          const pdfBytes = await pdfDoc.save();
+          downloadBlob(new Blob([pdfBytes], { type: 'application/pdf' }), 'belgeler_birlestirilmis.pdf');
+          showStatus('studio-status', '✅ Birleşik PDF başarıyla indirildi!', 'success');
+
+        } else if (format === 'pdf-zip') {
+          await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+          const zip = new JSZip();
+
+          for (let i = 0; i < selected.length; i++) {
+            const p = selected[i];
+            showStatus('studio-status', `PDF oluşturuluyor: ${i + 1} / ${selected.length}...`, 'info');
+
+            let pdfBytes;
+            if (p.pdfPage && !p.fullCanvas && (p.filter === 'none' || p.filter === 'orig') && !p.isCcitt) {
+              const srcDoc = await getSrcDoc(p.fileId);
+              if (srcDoc) {
+                const singleDoc = await PDFLib.PDFDocument.create();
+                const [copiedPage] = await singleDoc.copyPages(srcDoc, [p.pageIndex - 1]);
+                if (p.rotation !== 0) {
+                  const curRot = copiedPage.getRotation().angle;
+                  copiedPage.setRotation(PDFLib.degrees((curRot + p.rotation) % 360));
+                }
+                singleDoc.addPage(copiedPage);
+                pdfBytes = await singleDoc.save();
+              }
+            }
+            if (!pdfBytes) {
+              const canvas = await getPageFullCanvas(p);
+              let targetCanvas = canvas;
+              if (p.rotation !== 0) targetCanvas = rotateCanvas(canvas, p.rotation);
+              if (p.filter !== 'none' && p.filter !== 'orig') applyFilterToCanvas(targetCanvas, p.filter);
+
+              if (p.isCcitt) {
+                const singleDoc = await PDFLib.PDFDocument.create();
+                const { bitData, width, height } = canvasTo1BitCcitt(targetCanvas, 140);
+                const a4Width = 595.28;
+                const a4Height = Math.round(a4Width * (height / width));
+                appendCcittG4Page(singleDoc, bitData, width, height, a4Width, a4Height, 1);
+                pdfBytes = await singleDoc.save();
+              } else {
+                pdfBytes = await canvasToSinglePagePdf(targetCanvas, 0.92);
+              }
+            }
+            zip.file(`sayfa_${i + 1}.pdf`, pdfBytes);
+          }
+          showStatus('studio-status', 'ZIP arşivi paketleniyor...', 'info');
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          downloadBlob(zipBlob, 'sayfalar_pdf.zip');
+          showStatus('studio-status', '✅ PDF ZIP arşivi indirildi!', 'success');
+
+        } else if (format === 'jpg-zip' || format === 'png-zip') {
+          await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js');
+          const zip = new JSZip();
+          const isPng = format === 'png-zip';
+          const ext = isPng ? 'png' : 'jpg';
+          const mime = isPng ? 'image/png' : 'image/jpeg';
+
+          for (let i = 0; i < selected.length; i++) {
+            const p = selected[i];
+            showStatus('studio-status', `Görsel hazırlanıyor: ${i + 1} / ${selected.length}...`, 'info');
+            const canvas = await getPageFullCanvas(p);
+            let targetCanvas = canvas;
+            if (p.rotation !== 0) targetCanvas = rotateCanvas(canvas, p.rotation);
+            if (p.filter !== 'none' && p.filter !== 'orig') applyFilterToCanvas(targetCanvas, p.filter);
+
+            const dataUrl = targetCanvas.toDataURL(mime, 0.92);
+            const base64Data = dataUrl.split(',')[1];
+            zip.file(`sayfa_${i + 1}.${ext}`, base64Data, { base64: true });
+          }
+          showStatus('studio-status', 'ZIP arşivi paketleniyor...', 'info');
+          const zipBlob = await zip.generateAsync({ type: 'blob' });
+          downloadBlob(zipBlob, `sayfalar_${ext}.zip`);
+          showStatus('studio-status', `✅ ${ext.toUpperCase()} ZIP arşivi indirildi!`, 'success');
+        }
+      } catch (err) {
+        console.error(err);
+        showStatus('studio-status', 'Dışa aktarma hatası: ' + getUserFriendlyError(err), 'error');
+      }
+    }
+
+    function rotateCanvas(canvas, deg) {
+      deg = (deg % 360 + 360) % 360;
+      if (deg === 0) return canvas;
+      const rot = document.createElement('canvas');
+      const ctx = rot.getContext('2d');
+      if (deg === 90) {
+        rot.width = canvas.height; rot.height = canvas.width;
+        ctx.translate(canvas.height, 0);
+        ctx.rotate(Math.PI / 2);
+      } else if (deg === 180) {
+        rot.width = canvas.width; rot.height = canvas.height;
+        ctx.translate(canvas.width, canvas.height);
+        ctx.rotate(Math.PI);
+      } else if (deg === 270) {
+        rot.width = canvas.height; rot.height = canvas.width;
+        ctx.translate(0, canvas.width);
+        ctx.rotate(-Math.PI / 2);
+      }
+      ctx.drawImage(canvas, 0, 0);
+      return rot;
+    }
+
+    /* ==========================================================================
+       CAMSCANNER İNCE AYAR MODALI (Gelişmiş 3'lü Motor & Çift Katmanlı Leke Silici)
+       ========================================================================== */
+    let modalPageIndex = -1;
+    let modalSourceCanvas = null;
+    let modalSourceCleanCanvas = null;
+    let modalCorners = [];
+    let modalActiveCorner = -1;
+    let modalDisplayScale = 1;
+    let modalEventsBound = false;
+    let modalWarpedCanvas = null;
+    let modalResultCanvas = null;
+    let modalCurrentFilter = 'orig';
+    let modalEraserActive = false;
+    let modalBrushSize = 15;
+    let modalIsErasing = false;
+    let modalLastEraserPos = null;
+    let modalUndoStack = [];
+
+    async function openStudioEditor(index) {
+      modalPageIndex = index;
+      const p = masterPages[index];
+      const overlay = document.getElementById('studio-modal');
+      if (!overlay) return;
+
+      modalEraserActive = false;
+      const eraserBtn = document.getElementById('modal-eraser-btn');
+      if (eraserBtn) {
+        eraserBtn.innerText = '🧹 Leke Silici: Kapalı';
+        eraserBtn.className = 'btn-secondary';
+      }
+
+      modalUndoStack = [];
+      modalCurrentFilter = p.filter || 'orig';
+      modalWarpedCanvas = null;
+      modalResultCanvas = null;
+
+      // Sonuç sarmalayıcısını gizle, çalışma canvasını göster
+      const resWrap = document.getElementById('modal-result-wrap');
+      if (resWrap) resWrap.style.display = 'none';
+      const canWrap = document.getElementById('modal-canvas-wrap');
+      if (canWrap) canWrap.style.display = 'inline-block';
+
+      const fullCanvas = await getPageFullCanvas(p);
+      modalSourceCanvas = document.createElement('canvas');
+      modalSourceCanvas.width = fullCanvas.width;
+      modalSourceCanvas.height = fullCanvas.height;
+      modalSourceCanvas.getContext('2d', { willReadFrequently: true }).drawImage(fullCanvas, 0, 0);
+
+      modalSourceCleanCanvas = document.createElement('canvas');
+      modalSourceCleanCanvas.width = fullCanvas.width;
+      modalSourceCleanCanvas.height = fullCanvas.height;
+      modalSourceCleanCanvas.getContext('2d', { willReadFrequently: true }).drawImage(fullCanvas, 0, 0);
+
+      overlay.style.display = 'flex';
+      modalResetCorners();
+      requestAnimationFrame(() => {
+        modalRenderWorkspace();
+      });
+      modalInitEvents();
+    }
+
+    function closeStudioModal(save = false) {
+      const overlay = document.getElementById('studio-modal');
+      if (overlay) overlay.style.display = 'none';
+      modalSourceCanvas = null;
+      modalSourceCleanCanvas = null;
+      modalWarpedCanvas = null;
+      modalResultCanvas = null;
+      modalUndoStack = [];
+      modalEraserActive = false;
+    }
+
+    /* KÖŞELERİ SIFIRLA (%100 TAM SAYFA SINIRLARI) */
+    function modalResetCorners() {
+      if (!modalSourceCanvas) return;
+      const w = modalSourceCanvas.width;
+      const h = modalSourceCanvas.height;
+      modalCorners = [
+        { x: 0, y: 0 },
+        { x: w, y: 0 },
+        { x: w, y: h },
+        { x: 0, y: h }
+      ];
+      modalRenderWorkspace();
+    }
+
+    function modalRotateSource() {
+      if (!modalSourceCanvas) return;
+      const oldW = modalSourceCanvas.width;
+      const oldH = modalSourceCanvas.height;
+      const rotCanvas = document.createElement('canvas');
+      rotCanvas.width = oldH;
+      rotCanvas.height = oldW;
+      const ctx = rotCanvas.getContext('2d');
+      ctx.translate(oldH, 0);
+      ctx.rotate(Math.PI / 2);
+      ctx.drawImage(modalSourceCanvas, 0, 0);
+
+      modalSourceCanvas = rotCanvas;
+
+      if (modalCorners && modalCorners.length === 4) {
+        const transformed = modalCorners.map(pt => ({
+          x: oldH - pt.y,
+          y: pt.x
+        }));
+        modalCorners = [
+          transformed[3],
+          transformed[0],
+          transformed[1],
+          transformed[2]
+        ];
+      }
+      modalRenderWorkspace();
+    }
+
+    function modalRenderWorkspace() {
+      if (!modalSourceCanvas) return;
+      const canvas = document.getElementById('modal-canvas');
+      const wrap = document.getElementById('modal-canvas-wrap');
+      const parentEl = wrap && wrap.parentElement;
+      const parentW = parentEl ? parentEl.clientWidth : 0;
+      const parentH = parentEl ? parentEl.clientHeight : 0;
+      const isMobile = window.innerWidth < 768;
+
+      // Genişlik ve yükseklik sınırları: hem ene hem boya asla taşmayacak şekilde tam sığdır
+      const maxW = Math.max(120, Math.min(parentW > 50 ? (parentW - 20) : (window.innerWidth - 32), 1200));
+      // Mobilde araç çubukları dikeyde daha çok yer kapladığından güvenli dikey alan hesabı
+      const safeH = isMobile ? Math.min(window.innerHeight * 0.44, 380) : (window.innerHeight * 0.55);
+      const maxH = Math.max(120, parentH > 100 ? (parentH - 20) : safeH);
+
+      const imgW = modalSourceCanvas.width;
+      const imgH = modalSourceCanvas.height;
+
+      modalDisplayScale = Math.min(maxW / imgW, maxH / imgH, 1.0);
+      const dispW = Math.round(imgW * modalDisplayScale);
+      const dispH = Math.round(imgH * modalDisplayScale);
+
+      canvas.width = dispW;
+      canvas.height = dispH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(modalSourceCanvas, 0, 0, dispW, dispH);
+
+      // Leke silici açıkken köşeleri daha şeffaf göster ki çizime engel olmasın
+      const alphaLine = modalEraserActive ? '0.3' : '1.0';
+      const alphaFill = modalEraserActive ? '0.05' : '0.2';
+
+      const pts = modalCorners.map(p => ({
+        x: p.x * modalDisplayScale,
+        y: p.y * modalDisplayScale
+      }));
+
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      ctx.lineTo(pts[1].x, pts[1].y);
+      ctx.lineTo(pts[2].x, pts[2].y);
+      ctx.lineTo(pts[3].x, pts[3].y);
+      ctx.closePath();
+      ctx.fillStyle = `rgba(56, 189, 248, ${alphaFill})`;
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = `rgba(56, 189, 248, ${alphaLine})`;
+      ctx.stroke();
+
+      pts.forEach((pt, idx) => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, modalEraserActive ? 8 : 14, 0, Math.PI * 2);
+        ctx.fillStyle = (modalActiveCorner === idx) ? '#ef4444' : (modalEraserActive ? 'rgba(2, 132, 199, 0.5)' : '#0284c7');
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 6;
+        ctx.fill();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, modalEraserActive ? 2 : 4, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+                /* ==========================================================================
+       ORTAK KÖŞE ANALİZİ & MORFOLOJİ YARDIMCILARI
+       ========================================================================== */
+    function dilate3x3(src, w, h) {
+      const dst = new Uint8Array(w * h);
+      for (let y = 1; y < h - 1; y++) {
+        const row = y * w;
+        for (let x = 1; x < w - 1; x++) {
+          const idx = row + x;
+          if (src[idx] || src[idx - 1] || src[idx + 1] ||
+              src[idx - w] || src[idx + w] ||
+              src[idx - w - 1] || src[idx - w + 1] ||
+              src[idx + w - 1] || src[idx + w + 1]) {
+            dst[idx] = 1;
+          }
+        }
+      }
+      return dst;
+    }
+
+    function extractQuadCornersFromMask(mask, w, h) {
+      let minSum = Infinity, maxSum = -Infinity;
+      let minDiff = Infinity, maxDiff = -Infinity;
+      let tl = { x: 0, y: 0 }, br = { x: w, y: h };
+      let bl = { x: 0, y: h }, tr = { x: w, y: 0 };
+      let count = 0;
+
+      for (let y = 2; y < h - 2; y++) {
+        const row = y * w;
+        for (let x = 2; x < w - 2; x++) {
+          const idx = row + x;
+          if (mask[idx]) {
+            count++;
+            const sum = x + y;
+            const diff = x - y;
+            if (sum < minSum) { minSum = sum; tl = { x, y }; }
+            if (sum > maxSum) { maxSum = sum; br = { x, y }; }
+            if (diff < minDiff) { minDiff = diff; bl = { x, y }; }
+            if (diff > maxDiff) { maxDiff = diff; tr = { x, y }; }
+          }
+        }
+      }
+
+      const minArea = w * h * 0.10;
+      const approxArea = Math.abs((br.x - tl.x) * (br.y - tl.y));
+
+      const cp = (a, b, c) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      const z1 = cp(tl, tr, br) > 0;
+      const z2 = cp(tr, br, bl) > 0;
+      const z3 = cp(br, bl, tl) > 0;
+      const z4 = cp(bl, tl, tr) > 0;
+      const isConvex = (z1 === z2 && z2 === z3 && z3 === z4);
+
+      if (count > 50 && approxArea > minArea && isConvex) {
+        return [tl, tr, br, bl];
+      }
+      return null;
+    }
+
+    /* Sayfa Renk Tespiti: Thumbnail pixel örnekleme (~5ms) */
+    function detectPageColor(canvas) {
+      if (!canvas || canvas.width === 0) return false;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const step = Math.max(1, Math.floor(canvas.width / 20));
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let colorPixels = 0, total = 0;
+      for (let y = 0; y < canvas.height; y += step) {
+        for (let x = 0; x < canvas.width; x += step) {
+          const i = (y * canvas.width + x) * 4;
+          const r = data[i], g = data[i+1], b = data[i+2];
+          if (Math.abs(r - g) > 18 || Math.abs(g - b) > 18 || Math.abs(r - b) > 18) colorPixels++;
+          total++;
+        }
+      }
+      return total > 0 && (colorPixels / total) > 0.02;
+    }
+
+    /* Ortak Yardımcı: Ölçekli Canvas Oluşturucu */
+    function createScaledCanvas(src, maxDim) {
+      const scale = Math.min(maxDim / src.width, maxDim / src.height, 1.0);
+      const sw = Math.round(src.width * scale);
+      const sh = Math.round(src.height * scale);
+      const sc = document.createElement('canvas');
+      sc.width = sw; sc.height = sh;
+      const sctx = sc.getContext('2d', { willReadFrequently: true });
+      sctx.drawImage(src, 0, 0, sw, sh);
+      return { sc, sctx, sw, sh, scale };
+    }
+
+    /* MOTOR 1: ⚡ SAF JS (Hızlı Sobel + 3x3 Morfoloji) */
+    function modalAutoDetectFastJS() {
+      if (!modalSourceCanvas) return;
+      const { sc, sctx, sw, sh, scale } = createScaledCanvas(modalSourceCanvas, 480);
+      const imgData = sctx.getImageData(0, 0, sw, sh);
+      const d = imgData.data;
+
+      const gray = new Uint8Array(sw * sh);
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        gray[j] = (d[i] * 299 + d[i + 1] * 587 + d[i + 2] * 114) / 1000;
+      }
+
+      const rawEdges = new Uint8Array(sw * sh);
+      for (let y = 2; y < sh - 2; y++) {
+        const row = y * sw;
+        for (let x = 2; x < sw - 2; x++) {
+          const idx = row + x;
+          const gx = (gray[idx + 1] - gray[idx - 1]);
+          const gy = (gray[idx + sw] - gray[idx - sw]);
+          if (Math.abs(gx) + Math.abs(gy) > 35) rawEdges[idx] = 1;
+        }
+      }
+
+      const edges = dilate3x3(rawEdges, sw, sh);
+      const corners = extractQuadCornersFromMask(edges, sw, sh);
+
+      if (corners) {
+        modalCorners = corners.map(pt => ({ x: pt.x / scale, y: pt.y / scale }));
+        modalRenderWorkspace();
+        showStatus('studio-status', '⚡ Saf JS (Sobel + Morfoloji) ile köşeler tespit edildi!', 'info');
+      } else {
+        modalResetCorners();
+        showStatus('studio-status', 'Köşeler belirlenemedi; tam sayfa sınırlarına ayarlandı.', 'info');
+      }
+    }
+
+    /* MOTOR 2: 🤖 DERİN OPENCV (v21 Mükemmel Standart: 600px + Canny + Dilate + RETR_LIST) */
+    async function modalAutoDetect() {
+      if (!modalSourceCanvas) return;
+      if (typeof cv === 'undefined') {
+        try {
+          showStatus('studio-status', 'OpenCV motoru yükleniyor...', 'info');
+          await loadExternalScript('https://docs.opencv.org/4.8.0/opencv.js');
+          if (typeof cv !== 'undefined' && !cv.getBuildInformation) {
+            await new Promise(r => { cv['onRuntimeInitialized'] = r; });
+          }
+        } catch (_) {
+          modalAutoDetectFastJS();
+          return;
+        }
+      }
+
+      try {
+        const imgW = modalSourceCanvas.width;
+        const imgH = modalSourceCanvas.height;
+
+        const scale = Math.min(1.0, 600 / Math.max(imgW, imgH));
+        const sw = Math.round(imgW * scale);
+        const sh = Math.round(imgH * scale);
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = sw;
+        tempCanvas.height = sh;
+        const tctx = tempCanvas.getContext('2d', { willReadFrequently: true });
+        tctx.drawImage(modalSourceCanvas, 0, 0, sw, sh);
+
+        const src = cv.imread(tempCanvas);
+        const gray = new cv.Mat();
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        const blur = new cv.Mat();
+        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+        const edges = new cv.Mat();
+        cv.Canny(blur, edges, 50, 150);
+        const kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+        cv.dilate(edges, edges, kernel);
+
+        const contours = new cv.MatVector();
+        const hierarchy = new cv.Mat();
+        cv.findContours(edges, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_SIMPLE);
+
+        let maxArea = 0;
+        let bestPts = null;
+
+        for (let i = 0; i < contours.size(); i++) {
+          const cnt = contours.get(i);
+          const area = cv.contourArea(cnt);
+          if (area > (sw * sh * 0.10)) {
+            const peri = cv.arcLength(cnt, true);
+            const approx = new cv.Mat();
+            cv.approxPolyDP(cnt, approx, 0.025 * peri, true);
+            if (approx.rows === 4 && cv.isContourConvex(approx)) {
+              if (area > maxArea) {
+                maxArea = area;
+                bestPts = [];
+                for (let r = 0; r < 4; r++) {
+                  bestPts.push({
+                    x: approx.data32S[r * 2] / scale,
+                    y: approx.data32S[r * 2 + 1] / scale
+                  });
+                }
+              }
+            }
+            approx.delete();
+          }
+          cnt.delete();
+        }
+
+        src.delete(); gray.delete(); blur.delete(); edges.delete(); kernel.delete();
+        contours.delete(); hierarchy.delete();
+
+        if (bestPts && bestPts.length === 4) {
+          const ptsBySum = [...bestPts].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+          const tl = ptsBySum[0];
+          const br = ptsBySum[3];
+          const remaining = [ptsBySum[1], ptsBySum[2]].sort((a, b) => (a.y - a.x) - (b.y - b.x));
+          const tr = remaining[0];
+          const bl = remaining[1];
+
+          modalCorners = [tl, tr, br, bl];
+          modalRenderWorkspace();
+          showStatus('studio-status', '✅ Belge sınırları OpenCV ile başarıyla tespit edildi!', 'info');
+        } else {
+          modalAutoDetectFastJS();
+        }
+      } catch (err) {
+        console.error('OpenCV tespit hatası:', err);
+        modalAutoDetectFastJS();
+      }
+    }
+
+    /* MOTOR 3: 🔬 ÇİZGİ JSFEAT (Canny + Gaussian + Morfoloji) */
+    async function modalAutoDetectJSFeat() {
+      if (!modalSourceCanvas) return;
+      try {
+        await loadExternalScript('https://cdnjs.cloudflare.com/ajax/libs/jsfeat/0.0.8/jsfeat-min.js');
+      } catch (e) {
+        console.warn('JSFeat yüklenemedi, Saf JS motoru kullanılıyor:', e);
+        modalAutoDetectFastJS();
+        return;
+      }
+
+      try {
+        const { sc, sctx, sw, sh, scale } = createScaledCanvas(modalSourceCanvas, 500);
+        const imgData = sctx.getImageData(0, 0, sw, sh);
+
+        const img_u8 = new jsfeat.matrix_t(sw, sh, jsfeat.U8C1_t);
+        jsfeat.imgproc.grayscale(imgData.data, sw, sh, img_u8);
+        jsfeat.imgproc.gaussian_blur(img_u8, img_u8, 3);
+        jsfeat.imgproc.canny(img_u8, img_u8, 20, 60);
+
+        const edges = dilate3x3(img_u8.data, sw, sh);
+        const corners = extractQuadCornersFromMask(edges, sw, sh);
+
+        if (corners) {
+          modalCorners = corners.map(pt => ({ x: pt.x / scale, y: pt.y / scale }));
+          modalRenderWorkspace();
+          showStatus('studio-status', '🔬 JSFeat motoru ile köşeler tespit edildi!', 'info');
+        } else {
+          modalAutoDetectFastJS();
+        }
+      } catch (err) {
+        console.error('JSFeat hatası:', err);
+        modalAutoDetectFastJS();
+      }
+    }
+
+    /* MODAL ETKİLEŞİM VE İKİ AŞAMALI LEKE SİLİCİ OLAYLARI */
+    function modalInitEvents() {
+      if (modalEventsBound) return;
+      modalEventsBound = true;
+
+      const canvas = document.getElementById('modal-canvas');
+      const loupe = document.getElementById('modal-loupe');
+      const loupeCanvas = document.getElementById('modal-loupe-canvas');
+      const loupeCtx = loupeCanvas.getContext('2d');
+
+      function getCanvasPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = (e.touches && e.touches.length > 0) ? e.touches[0].clientX : e.clientX;
+        const clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+        const scaleX = rect.width > 0 ? (canvas.width / rect.width) : 1;
+        const scaleY = rect.height > 0 ? (canvas.height / rect.height) : 1;
+        const cssX = clientX - rect.left;
+        const cssY = clientY - rect.top;
+        return {
+          x: cssX * scaleX,
+          y: cssY * scaleY,
+          cssX: cssX,
+          cssY: cssY
+        };
+      }
+
+      function onPointerDown(e) {
+        if (!modalSourceCanvas) return;
+        const pos = getCanvasPos(e);
+
+        if (modalEraserActive) {
+          saveModalUndo();
+          modalIsErasing = true;
+          if (canvas.setPointerCapture && e.pointerId) {
+            try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+          }
+          e.preventDefault();
+          const srcX = pos.x / modalDisplayScale;
+          const srcY = pos.y / modalDisplayScale;
+          modalLastEraserPos = { x: srcX, y: srcY };
+          drawModalSourceEraser(modalLastEraserPos, modalLastEraserPos);
+          modalRenderWorkspace();
+          return;
+        }
+
+        const rect = canvas.getBoundingClientRect();
+        // CSS piksel başına düşen oranlar
+        const cssRatioX = rect.width > 0 ? rect.width / canvas.width : 1;
+        const cssRatioY = rect.height > 0 ? rect.height / canvas.height : 1;
+
+        // Mobil parmak dokunuşu için geniş hit radius (dikey evraklarda üst köşeler rahat seçilsin)
+        const hitRadius = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) ? 68 : 44;
+        let closest = -1;
+        let minDist = hitRadius;
+        modalCorners.forEach((p, idx) => {
+          // p.x * modalDisplayScale doğrudan canvas içi pikseldir; CSS pikseline çarparak dönüştürürüz
+          const cornerCssX = (p.x * modalDisplayScale) * cssRatioX;
+          const cornerCssY = (p.y * modalDisplayScale) * cssRatioY;
+          const dist = Math.hypot(cornerCssX - pos.cssX, cornerCssY - pos.cssY);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = idx;
+          }
+        });
+
+        if (closest !== -1) {
+          modalActiveCorner = closest;
+          if (e.target.setPointerCapture && e.pointerId !== undefined) {
+            try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+          }
+          e.preventDefault();
+          updateLoupe(pos.cssX, pos.cssY);
+          modalRenderWorkspace();
+        }
+      }
+
+      function onPointerMove(e) {
+        if (!modalSourceCanvas) return;
+        const pos = getCanvasPos(e);
+
+        if (modalEraserActive && modalIsErasing && modalLastEraserPos) {
+          e.preventDefault();
+          const srcX = pos.x / modalDisplayScale;
+          const srcY = pos.y / modalDisplayScale;
+          const currentPos = { x: srcX, y: srcY };
+          drawModalSourceEraser(modalLastEraserPos, currentPos);
+          modalLastEraserPos = currentPos;
+          modalRenderWorkspace();
+          return;
+        }
+
+        if (modalActiveCorner === -1) return;
+        e.preventDefault();
+        const imgW = modalSourceCanvas.width;
+        const imgH = modalSourceCanvas.height;
+
+        const newImgX = Math.max(0, Math.min(imgW, pos.x / modalDisplayScale));
+        const newImgY = Math.max(0, Math.min(imgH, pos.y / modalDisplayScale));
+
+        modalCorners[modalActiveCorner] = { x: newImgX, y: newImgY };
+        modalRenderWorkspace();
+        updateLoupe(pos.cssX, pos.cssY);
+      }
+
+      function onPointerUp(e) {
+        if (modalEraserActive) {
+          modalIsErasing = false;
+          modalLastEraserPos = null;
+        }
+        if (modalActiveCorner !== -1) {
+          modalActiveCorner = -1;
+          loupe.style.display = 'none';
+          if (e && e.target && e.target.releasePointerCapture && e.pointerId !== undefined) {
+            try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+          }
+          modalRenderWorkspace();
+        }
+      }
+
+      function updateLoupe(cx, cy) {
+        if (modalActiveCorner === -1 || !modalSourceCanvas) return;
+        const canvasEl = document.getElementById('modal-canvas');
+        const cRect = canvasEl.getBoundingClientRect();
+        const LOUPE_SIZE = 130;
+        const MARGIN = 10;
+
+        // Parmak hangi yarıda? → büyüteç karşı köşeye
+        const isLeft = cx < cRect.width  / 2;
+        const isTop  = cy < cRect.height / 2;
+        const loupeLeft = isLeft ? (cRect.width  - LOUPE_SIZE - MARGIN) : MARGIN;
+        const loupeTop  = isTop  ? (cRect.height - LOUPE_SIZE - MARGIN) : MARGIN;
+
+        loupe.style.display = 'block';
+        loupe.style.transform = 'none';    // CSS translate(-50%,-100%) etkisiz
+        loupe.style.left = loupeLeft + 'px';
+        loupe.style.top  = loupeTop  + 'px';
+
+        const pt = modalCorners[modalActiveCorner];
+        const zoom = 2.5;
+        const srcW = 130 / (zoom * modalDisplayScale);
+        const srcH = 130 / (zoom * modalDisplayScale);
+        const sx = pt.x - srcW / 2;
+        const sy = pt.y - srcH / 2;
+
+        loupeCtx.clearRect(0, 0, 130, 130);
+        loupeCtx.drawImage(modalSourceCanvas, sx, sy, srcW, srcH, 0, 0, 130, 130);
+      }
+
+      canvas.addEventListener('pointerdown', onPointerDown);
+      canvas.addEventListener('pointermove', onPointerMove);
+      canvas.addEventListener('pointerup', onPointerUp);
+      canvas.addEventListener('pointercancel', onPointerUp);
+
+      // Escape tuşu ile modalı kapatma
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const overlay = document.getElementById('studio-modal');
+          if (overlay && overlay.style.display !== 'none') {
+            closeStudioModal(false);
+          }
+        }
+      });
+    }
+
+    function drawModalSourceEraser(p1, p2) {
+      if (!modalSourceCanvas || !modalSourceCleanCanvas) return;
+      const lw = modalBrushSize / modalDisplayScale;
+      [modalSourceCanvas, modalSourceCleanCanvas].forEach(c => {
+        const ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.save();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = lw;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    /* PERSPEKTİF DÜZELTME & WARP MOTORU */
+    function modalProcessWarp() {
+      if (!modalSourceCanvas) return;
+      const [tl, tr, br, bl] = modalCorners;
+      const wTop = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+      const wBottom = Math.hypot(br.x - bl.x, br.y - bl.y);
+      const targetW = Math.round(Math.max(wTop, wBottom));
+
+      const hLeft = Math.hypot(bl.x - tl.x, bl.y - tl.y);
+      const hRight = Math.hypot(br.x - tr.x, br.y - tr.y);
+      const targetH = Math.round(Math.max(hLeft, hRight));
+
+      const warpedCanvas = document.createElement('canvas');
+      warpedCanvas.width = targetW;
+      warpedCanvas.height = targetH;
+      const wctx = warpedCanvas.getContext('2d', { willReadFrequently: true });
+
+      const steps = 16;
+      for (let yi = 0; yi < steps; yi++) {
+        for (let xi = 0; xi < steps; xi++) {
+          const u0 = xi / steps, u1 = (xi + 1) / steps;
+          const v0 = yi / steps, v1 = (yi + 1) / steps;
+
+          const p00 = bilinearPoint(tl, tr, br, bl, u0, v0);
+          const p10 = bilinearPoint(tl, tr, br, bl, u1, v0);
+          const p11 = bilinearPoint(tl, tr, br, bl, u1, v1);
+          const p01 = bilinearPoint(tl, tr, br, bl, u0, v1);
+
+          const dx = u0 * targetW;
+          const dy = v0 * targetH;
+          const dw = (u1 - u0) * targetW;
+          const dh = (v1 - v0) * targetH;
+
+          const sx = Math.min(p00.x, p01.x);
+          const sy = Math.min(p00.y, p10.y);
+          const sw = Math.max(p10.x, p11.x) - sx;
+          const sh = Math.max(p01.y, p11.y) - sy;
+
+          if (sw > 0 && sh > 0) {
+            wctx.drawImage(modalSourceCleanCanvas || modalSourceCanvas, sx, sy, sw, sh, dx, dy, dw, dh);
+          }
+        }
+      }
+
+      modalWarpedCanvas = warpedCanvas;
+      modalResultCanvas = document.getElementById('modal-result-canvas');
+      modalResultCanvas.width = targetW;
+      modalResultCanvas.height = targetH;
+      modalResultCanvas.getContext('2d', { willReadFrequently: true }).drawImage(modalWarpedCanvas, 0, 0);
+
+      // Çalışma alanını sonuç canvasına geçir
+      document.getElementById('modal-canvas-wrap').style.display = 'none';
+      document.getElementById('modal-result-wrap').style.display = 'block';
+
+      applyModalFilter(modalCurrentFilter || 'magic');
+      initModalResultEraser();
+    }
+
+    function bilinearPoint(tl, tr, br, bl, u, v) {
+      const x = (1 - u) * (1 - v) * tl.x + u * (1 - v) * tr.x + u * v * br.x + (1 - u) * v * bl.x;
+      const y = (1 - u) * (1 - v) * tl.y + u * (1 - v) * tr.y + u * v * br.y + (1 - u) * v * bl.y;
+      return { x, y };
+    }
+
+    function applyModalFilter(type) {
+      modalCurrentFilter = type;
+      if (modalWarpedCanvas && modalResultCanvas) {
+        const rctx = modalResultCanvas.getContext('2d', { willReadFrequently: true });
+        rctx.drawImage(modalWarpedCanvas, 0, 0);
+        applyFilterToCanvas(modalResultCanvas, type);
+      } else if (modalSourceCanvas && modalSourceCleanCanvas) {
+        const sctx = modalSourceCanvas.getContext('2d', { willReadFrequently: true });
+        sctx.drawImage(modalSourceCleanCanvas, 0, 0);
+        if (type !== 'orig' && type !== 'none') {
+          applyFilterToCanvas(modalSourceCanvas, type);
+        }
+        modalRenderWorkspace();
+      }
+    }
+
+    function toggleModalEraser() {
+      modalEraserActive = !modalEraserActive;
+      const btn = document.getElementById('modal-eraser-btn');
+      if (btn) {
+        btn.innerText = modalEraserActive ? '🧹 Leke Silici: AÇIK' : '🧹 Leke Silici: Kapalı';
+        btn.className = modalEraserActive ? 'btn-primary' : 'btn-secondary';
+      }
+      modalRenderWorkspace();
+    }
+
+    function setModalBrushSize(size) {
+      modalBrushSize = size;
+      [15, 30, 50].forEach(s => {
+        const b = document.getElementById('modal-brush-' + s);
+        if (b) b.className = s === size ? 'scan-brush-btn active' : 'scan-brush-btn';
+      });
+    }
+
+    function initModalResultEraser() {
+      const canvas = modalResultCanvas;
+      if (!canvas || canvas._eraserBound) return;
+      canvas._eraserBound = true;
+
+      function getResPos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return {
+          x: (e.clientX - rect.left) * scaleX,
+          y: (e.clientY - rect.top) * scaleY
+        };
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        if (!modalEraserActive || !modalWarpedCanvas) return;
+        saveModalUndo();
+        modalIsErasing = true;
+        if (canvas.setPointerCapture && e.pointerId) {
+          try { canvas.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        e.preventDefault();
+        const pos = getResPos(e);
+        modalLastEraserPos = pos;
+        drawModalResultEraserStroke(pos, pos);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!modalIsErasing || !modalEraserActive || !modalLastEraserPos) return;
+        e.preventDefault();
+        const pos = getResPos(e);
+        drawModalResultEraserStroke(modalLastEraserPos, pos);
+        modalLastEraserPos = pos;
+      });
+
+      function stop() {
+        modalIsErasing = false;
+        modalLastEraserPos = null;
+      }
+      canvas.addEventListener('pointerup', stop);
+      canvas.addEventListener('pointercancel', stop);
+    }
+
+    function drawModalResultEraserStroke(p1, p2) {
+      if (!modalResultCanvas || !modalWarpedCanvas) return;
+      const rctx = modalResultCanvas.getContext('2d', { willReadFrequently: true });
+      const wctx = modalWarpedCanvas.getContext('2d', { willReadFrequently: true });
+
+      [rctx, wctx].forEach(ctx => {
+        ctx.save();
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.lineWidth = modalBrushSize;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    function saveModalUndo() {
+      const isWarped = modalWarpedCanvas && document.getElementById('modal-result-wrap')?.style.display === 'block';
+      if (isWarped) {
+        if (!modalWarpedCanvas) return;
+        const c = document.createElement('canvas');
+        c.width = modalWarpedCanvas.width; c.height = modalWarpedCanvas.height;
+        c.getContext('2d', { willReadFrequently: true }).drawImage(modalWarpedCanvas, 0, 0);
+        modalUndoStack.push({ isWarped: true, canvas: c });
+      } else {
+        if (!modalSourceCanvas || !modalSourceCleanCanvas) return;
+        const cSource = document.createElement('canvas');
+        cSource.width = modalSourceCanvas.width; cSource.height = modalSourceCanvas.height;
+        cSource.getContext('2d', { willReadFrequently: true }).drawImage(modalSourceCanvas, 0, 0);
+
+        const cClean = document.createElement('canvas');
+        cClean.width = modalSourceCleanCanvas.width; cClean.height = modalSourceCleanCanvas.height;
+        cClean.getContext('2d', { willReadFrequently: true }).drawImage(modalSourceCleanCanvas, 0, 0);
+
+        modalUndoStack.push({ isWarped: false, canvas: cSource, cleanCanvas: cClean });
+      }
+      if (modalUndoStack.length > 12) modalUndoStack.shift();
+    }
+
+    function modalUndo() {
+      if (modalUndoStack.length === 0) return;
+      const item = modalUndoStack.pop();
+      if (item.isWarped && modalWarpedCanvas) {
+        modalWarpedCanvas.getContext('2d', { willReadFrequently: true }).drawImage(item.canvas, 0, 0);
+        applyModalFilter(modalCurrentFilter);
+      } else if (!item.isWarped && modalSourceCanvas && modalSourceCleanCanvas) {
+        modalSourceCanvas.getContext('2d', { willReadFrequently: true }).drawImage(item.canvas, 0, 0);
+        if (item.cleanCanvas) {
+          modalSourceCleanCanvas.getContext('2d', { willReadFrequently: true }).drawImage(item.cleanCanvas, 0, 0);
+        }
+        modalRenderWorkspace();
+      }
+    }
+
+    function saveStudioModal() {
+      if (modalPageIndex < 0 || modalPageIndex >= masterPages.length) return;
+      const page = masterPages[modalPageIndex];
+
+      const isWarped = modalWarpedCanvas && document.getElementById('modal-result-wrap')?.style.display === 'block';
+      const sourceCanvas = isWarped ? (modalResultCanvas || modalWarpedCanvas) : modalSourceCanvas;
+      const cleanSource = isWarped ? modalWarpedCanvas : modalSourceCleanCanvas;
+
+      if (sourceCanvas) {
+        const fullC = document.createElement('canvas');
+        fullC.width = sourceCanvas.width; fullC.height = sourceCanvas.height;
+        fullC.getContext('2d', { willReadFrequently: true }).drawImage(sourceCanvas, 0, 0);
+        page.fullCanvas = fullC;
+
+        const cleanFull = document.createElement('canvas');
+        const cleanRef = cleanSource || sourceCanvas;
+        cleanFull.width = cleanRef.width; cleanFull.height = cleanRef.height;
+        cleanFull.getContext('2d', { willReadFrequently: true }).drawImage(cleanRef, 0, 0);
+        page.cleanFullCanvas = cleanFull;
+
+        const thumbScale = Math.min(260 / fullC.width, 1.0);
+        const tw = Math.round(fullC.width * thumbScale);
+        const th = Math.round(fullC.height * thumbScale);
+        const tc = document.createElement('canvas');
+        tc.width = tw; tc.height = th;
+        tc.getContext('2d', { willReadFrequently: true }).drawImage(fullC, 0, 0, tw, th);
+        page.thumbCanvas = tc;
+
+        const cleanTc = document.createElement('canvas');
+        cleanTc.width = tw; cleanTc.height = th;
+        cleanTc.getContext('2d', { willReadFrequently: true }).drawImage(cleanFull, 0, 0, tw, th);
+        page.cleanThumbCanvas = cleanTc;
+
+        page.filter = modalCurrentFilter || 'none';
+      }
+
+      closeStudioModal(true);
+      renderStudioPageGrid();
+      showStatus('studio-status', `✅ Sayfa #${modalPageIndex + 1} güncellendi!`, 'info');
+    }
+    </script>
+</body>
+</html>

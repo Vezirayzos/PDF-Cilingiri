@@ -1,0 +1,95 @@
+**PDF Çilingiri (v31 – Modal Canvas Fix)** kapsamlı bir istemci taraflı belge stüdyosu. Tüm işlemler tarayıcıda gerçekleşiyor; dosyalar sunucuya gitmiyor.
+
+### Genel Bakış
+- **Amaç**: PDF + görselleri birleştirme, sayfa düzenleme, filtreleme, 300 DPI faks (CCITT G4) dönüşümü, OCR, CamScanner tarzı perspektif düzeltme + leke silici.
+- **Teknolojiler**:
+  - pdf.js (render)
+  - pdf-lib (oluşturma / kopyalama)
+  - JSZip
+  - Tesseract.js (OCR – ihtiyaç halinde yükleniyor)
+  - OpenCV.js + JSFeat + saf JS Sobel (köşe tespiti)
+  - Özel CCITT Group 4 encoder
+- **UI**: Koyu tema, sticky header, iki kademeli akış (Dosya Listesi → Sayfa Izgarası), tam ekran modal editör.
+- **PWA + AdSense** desteği mevcut.
+
+### Mimari ve Akış
+1. **Kademe 1 – Dosya Listesi** (`stage-files`)
+   - Çoklu PDF/görsel ekleme (sürükle-bırak + kamera)
+   - Hızlı mod seçici: Orijinal / Sihirli Renk / S&B / 300 DPI Faks / OCR
+   - Önizlemesiz hızlı dışa aktarma (tek PDF, ZIP’li ayrı PDF/JPG/PNG)
+
+2. **Kademe 2 – Sayfa Stüdyosu** (`stage-pages`)
+   - Thumbnail grid
+   - Seçim (tekli, Shift ile aralık, aralık input’u)
+   - Sıralama (sürükle-bırak + ok butonları)
+   - Toplu işlemler: filtre, 90° döndürme, CCITT işaretleme, OCR
+   - Her sayfa için “İnce Ayar” butonu → modal
+
+3. **Modal Editör** (CamScanner tarzı)
+   - Köşe noktaları (sürüklenebilir)
+   - 3 farklı otomatik tespit motoru:
+     - Saf JS (Sobel + 3x3 dilate)
+     - OpenCV (Canny + approxPolyDP)
+     - JSFeat
+   - Perspektif warp (bilinear sampling)
+   - Leke silici (farklı fırça boyutları, çift katmanlı – source + clean)
+   - Undo stack
+   - Filtreler (Sihirli / S&B / Orijinal)
+   - Kaydet → sayfanın `fullCanvas` / `cleanFullCanvas` / thumbnail’lerini günceller
+
+### Güçlü Yönler
+- **Gizlilik odaklı**: %100 istemci taraflı, “Sıfır Sunucu Kaydı” vurgusu doğru.
+- **Non-destructive tasarım**: Her sayfa için `cleanThumbCanvas` ve `cleanFullCanvas` tutuluyor. Filtre/CCITT geri alınabiliyor.
+- **Vektör koruma**: Filtre/ince ayar yapılmamış PDF sayfaları `pdf-lib` ile kopyalanıyor (kayıpsız).
+- **Kaliteli CCITT G4 encoder**: Kendi bit-writer’ı, run-length tabloları, EOFB ile gerçek faks standardına yakın çıktı üretiyor.
+- **Performans odaklı hızlı yol**: Önizleme istemeyen kullanıcılar için raster pipeline’sız hızlı export.
+- **Mobil düşünülmüş**: `touch-action: none`, pointer events, kamera input, responsive grid.
+- **Hata mesajları** kullanıcı dostu hale getirilmiş (`getUserFriendlyError`).
+
+### Dikkat Edilmesi / İyileştirme Gereken Noktalar
+
+**1. Bellek Yönetimi**
+- Büyük PDF’lerde çok sayıda canvas oluşturuluyor (`thumbCanvas`, `cleanThumbCanvas`, `fullCanvas`…).
+- `pageCanvas.width = 0; pageCanvas.height = 0;` sadece hızlı export’ta var. Modal ve thumbnail tarafında agresif temizlik yok.
+- `masterPages` dizisi büyüdükçe RAM kullanımı hızla artabilir (özellikle mobil).
+
+**2. Modal Canvas / Display Scale**
+- Dosya adı “modal canvas fix” olduğu için bu kısımda sorun yaşanmış görünüyor.
+- `modalDisplayScale` hesaplaması parent genişliğine bağlı. Parent henüz layout almamışsa veya overflow:hidden yüzünden daralırsa scale yanlış olabilir.
+- Loupe (büyüteç) ve köşe sürükleme CSS ↔ canvas koordinat dönüşümü hassas; özellikle yüksek DPI ekranlarda veya zoom’lu tarayıcılarda kayma riski var.
+
+**3. Kod Organizasyonu**
+- Tek devasa dosya (~138 KB). Bakım zor.
+- Birçok global değişken (`modalPageIndex`, `modalSourceCanvas`, `masterPages`…).
+- Event listener’lar bir kez bağlanıyor (`modalEventsBound`), ama modal kapanıp açıldığında state temizliği tam değil.
+
+**4. OpenCV / Harici Kütüphane Yükleme**
+- OpenCV.js oldukça ağır. İlk “Open CV” tıklamasında yükleniyor, bu iyi.
+- Ancak `cv.onRuntimeInitialized` bekleme mantığı biraz kırılgan. Hata durumunda Saf JS’e düşüyor – bu iyi bir fallback.
+
+**5. Perspektif Warp Kalitesi**
+- 16×16 grid ile bilinear sampling kullanılıyor. Büyük açılarda veya düşük çözünürlükte artefakt oluşabilir. Daha yüksek adım sayısı veya gerçek homography matrisi (OpenCV `getPerspectiveTransform` + `warpPerspective`) daha kaliteli olurdu.
+
+**6. Erişilebilirlik & UX**
+- Bazı ARIA etiketleri var, ancak modal odak tuzağı (focus trap) yok.
+- Klavye ile köşe taşıma / silme yok.
+- Status mesajları ekran okuyucu için yeterince duyurulmuyor.
+
+**7. Küçük Teknik Detaylar**
+- `pdfjsLib.GlobalWorkerOptions.workerSrc` doğru ayarlanmış.
+- Service Worker sadece CDN kütüphanelerini cache’liyor (iyi).
+- `ignoreEncryption: true` kullanılıyor – şifreli PDF’lerde uyarı veriyor ama yine de deniyor.
+- CCITT tarafında `BlackIs1: false` doğru seçilmiş (standart faks davranışı).
+
+### Özet Değerlendirme
+Bu, Türkçe ekosistemde gördüğüm en kapsamlı **tamamen istemci taraflı** belge stüdyolarından biri. Özellikle:
+- Non-destructive filtre + clean canvas yaklaşımı
+- Gerçek CCITT G4 encoder
+- Üç farklı köşe tespit motoru
+- Vektör korumalı export
+
+ciddi mühendislik işi.  
+
+Asıl riskler büyük dosyalarda bellek tüketimi ve modal canvas koordinat/scale hassasiyeti. “v31 modal canvas fix” ismi de bunu doğruluyor.
+
+İstersen spesifik bir bölüme (modal event’leri, CCITT encoder, bellek optimizasyonu, OpenCV fallback, performans profili vb.) daha derinlemesine girebilirim.

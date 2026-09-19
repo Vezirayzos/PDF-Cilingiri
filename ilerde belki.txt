@@ -1,0 +1,5 @@
+kırpmayı güçlendirme
+E — TensorFlow.js ile ML tabanlı belge tespiti
+EAST veya MobileNet tabanlı model → belge sınırlarını semantik olarak anlar.
+Getiri: Gerçekten profesyonel seviye.
+Kısıt: 2-10 MB model, yükleme süresi, gizlilik tartışması yoktur (istemci taraflı) ama karmaşıklık çok yüksek. Türkçe belge üzerinde test şart.

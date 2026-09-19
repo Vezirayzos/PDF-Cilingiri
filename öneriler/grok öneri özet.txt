@@ -1,0 +1,93 @@
+Aşağıda konuşmadaki tüm öneriler, baştan sona, tek listede. İndirme kartı da en altta.
+
+---
+
+## A. Ürün konumu
+
+1. iLovePDF rakibi değil, **belge stüdyosu**sun. Cümle: *Fotoğraftan veya PDF’den, dosya gitmeden, 300 DPI siyah-beyaz faks belgesi.*
+2. ABBYY ile yarışma. Lig: gizlilik, kota yok, G4, CamScanner, 10–40 sayfa.
+3. **300 DPI G4** (1-bit, `CCITTFaxDecode`) moat. JPEG S-B değil.
+4. Faks çıktısı arşiv içindir. **OCR girdisi değildir.**
+
+---
+
+## B. Bellek
+
+Tarayıcı exe kadar RAM kullanamaz. GPU hız verir, bellek düşürmez.
+
+**Asıl israf:** her sayfada 4 kopya (`thumb` + `cleanThumb` + `full` + `cleanFull`).
+
+1. Tek kaynak + **lazy** thumbnail; `fullCanvas` yalnız İnce Ayar / export / OCR’de, iş bitince sil.
+2. `canvas.width = 0` + referans `null` — modal kapanınca undo dahil.
+3. OffscreenCanvas + Worker: filtre, warp, CCITT ana thread’den çıksın.
+4. `ImageBitmap` paylaş.
+5. Büyük sayfada **tile** (512–1024).
+6. 50–80 sayfa üstünde kullanıcıyı Kademe 1 hızlı export’a yönlendir.
+
+---
+
+## C. Kod / modal
+
+1. Globalleri `studio = { files, pages, modal }` altında topla.
+2. Modal scale’i `ResizeObserver` / `rAF` ile ölç; loupe ve köşe için CSS↔canvas oranını her pointer’da aynı tut.
+3. Warp: 16×16 bilinear zayıf. OpenCV `warpPerspective` veya 32+ adım.
+4. OpenCV hata → Saf JS fallback kalsın.
+5. Şifreli PDF: net uyarı.
+6. Modal: focus trap; status için ARIA live.
+
+---
+
+## D. 300 DPI / CCITT
+
+1. Küçültme. Bu özelliği öne çıkar.
+2. Faks yolu: 300 DPI, eşik ~140, 1-bit G4. OCR yolu: **gri**, 300 DPI, 1-bit yok.
+3. İsteğe bağlı eşik 120–180.
+4. `K:-1`, `BlackIs1:false` kalsın.
+5. Export’ta “1-bit G4, ~KB/sayfa” göster.
+
+---
+
+## E. OCR
+
+ABBYY olmaz. Hedef: basılı Türkçe dilekçede iyi.
+
+**Bu hafta**
+
+- OCR canvas’ı ayrı: ~2480 px (300 DPI), warp önce, **gri veya sihirli**, beyaz çerçeve, `user_defined_dpi: 300`.
+- `tessdata_best` + LSTM, PSM 4 (dilekçe) / 6 (blok) / 7 (satır).
+- `tur+eng`, worker’ı sayfada öldürme, 2–3 worker.
+
+**Sonra**
+
+- Aranabilir PDF (görünmez text layer).
+- Confidence &lt; 60 işaretle.
+- PDF’de metin varsa `getTextContent`, OCR yok.
+- İsteğe bağlı TR düzeltme (İ/I, 0/O…) dikkatli.
+
+**Motor**
+
+- Varsayılan Tesseract.
+- “Gelişmiş”: PaddleOCR v5 + ONNX, lazy, **Türkçe A/B şart**.
+- GPT/vision yok (gizlilik biter). TrOCR bu kitleye ağır.
+
+---
+
+## F. Yapma
+
+OCR’ye G4 vermek · düşük DPI · her sayfada yeni worker · 4 kopyayı tutmak · ABBYY vaadi · belgeyi sunucuya atmak · G4’ü JPEG S-B’ye indirgemek · PDF→Word’e sapmak.
+
+---
+
+## G. Sıra
+
+1. Bellek lazy + OCR 300 DPI gri + Tesseract doğru ayar  
+2. Aranabilir PDF, confidence, modal scale  
+3. Paddle (testli), OpenCV warp, G4 rozeti  
+
+**Tek cümle:** Belleği dört kopyadan kurtar; OCR’ye faks değil 300 DPI gri ver; G4’ü ana fark tut; Tesseract’i doğru kullan, sonra isteğe bağlı Paddle; sunucuya çıkma.
+
+---
+
+Dosya:
+
+ render_file with file_path is /workspace/PDF-Cilingiri-oneriler.txt

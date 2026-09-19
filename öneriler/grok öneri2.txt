@@ -1,0 +1,74 @@
+En büyük kazanç **motor değiştirmek değil, Tesseract’e doğru görüntü vermek.** ABBYY seviyesine çıkamazsın; basılı Türkçe belgede “kullanılabilir”den “iyi”ye çıkarsın.
+
+### 1. Önce bunu yap — en yüksek getiri
+
+Tesseract resmi dokümanı da aynı şeyi söylüyor: ham fotoğrafı vermek hata oranını 2–4 kat artırır.
+
+Şu an `getPageFullCanvas` ~2x ölçekle render edip canvas’ı olduğu gibi veriyorsun. OCR için ayrı bir **hazırlık hattı** olmalı:
+
+1. **Çözünürlük:** Harf yüksekliği 20–40 px. Pratik kural: A4’ü **300 DPI** civarı rasterle (≈ 2480 px genişlik). 72 DPI veya küçük thumbnail OCR’ye ölüm.
+2. **Perspektif + deskew:** İnce ayardaki warp’ı OCR’den *önce* uygula. Eğik satır LSTM’i bozar.
+3. **Gölge / kontrast:** “Sihirli renk” OCR için genelde iyi. **Sert S/B (eşik 140) ve CCITT çoğu zaman kötü.** LSTM gri tonu sever; 1-bit agresif eşik ince çizgileri yok eder.
+4. **Kenar payı:** Metni canvas kenarına yapıştırma; 10–20 px beyaz çerçeve ekle.
+5. **DPI metadata:** Canvas’ın `dpi` bilgisi yoksa Tesseract 70 DPI sanır. Worker’a `user_defined_dpi: '300'` ver.
+
+Kural: OCR’ye **temiz gri, 300 DPI, düzeltilmiş** görüntü gitmeli. Faks/CCITT çıktısı arşiv içindir, OCR girdisi değildir.
+
+### 2. Tesseract’i doğru kullan (1–2 günlük iş)
+
+Şu anki `Tesseract.createWorker(ocrLang)` varsayılanlarla çalışıyor. Eksikler:
+
+| Ayar | Neden |
+|---|---|
+| `tessdata_best` (`4.0.0_best`) | `fast` paketinden belirgin daha doğru, daha yavaş |
+| `OEM.LSTM_ONLY` (1) | Eski motoru kapat |
+| `PSM`: dilekçe/çok sütun → **4**, tek blok form → **6**, fiş/tek satır → **7** | Varsayılan 3 karmaşık sayfada sık şaşırır |
+| Worker’ı her seferinde öldürme | Dil paketini bir kez yükle, sayfalar arası `recognize` tekrarla |
+| Scheduler | 2–3 worker ile sayfaları paralel oku (çekirdek-1, max 3) |
+| `tur` + `eng` | `tur+eng` doğru; Türkçe karakterler (`İ ı ş ğ ü ö ç`) için `tur` şart |
+| `preserve_interword_spaces: '1'` | Kelime birleşmesini azaltır |
+
+Ek ürün özelliği: sadece düz metin değil, **kelime kutuları + confidence**. Confidence &lt; 60 olanları sarı işaretle; kullanıcı düzeltir. OCR “öneri katmanı” olmalı, nihai gerçek değil.
+
+Scribe.js (Tesseract.js ekibinin kardeş projesi) PDF metin katmanı ve biraz daha iyi model içerir; “aranabilir PDF” istiyorsan bakmaya değer.
+
+### 3. Motor yükseltmesi — asıl sıçrama
+
+2026’da tarayıcıda Tesseract’i geçen yol: **PaddleOCR (PP-OCRv5) + ONNX Runtime Web (+ WebGPU)**.
+
+| Motor | Doğruluk | Dil | Maliyet (tarayıcı) |
+|---|---|---|---|
+| Tesseract.js | Orta (basılı Latin) | 100+ dil, `tur` hazır | ~2–20 MB, CPU |
+| **PaddleOCR.js / ppu-paddle-ocr** | Tesseract’ten ~5–15 puan daha iyi, özellikle karma düzen | Çince çok güçlü; Latin/çok dilli rec var, **Türkçe’yi test et** | 8–30 MB INT8, WebGPU’da &lt;1 sn/sayfa |
+| TrOCR / Donut (Transformers.js) | El yazısı / zor sayfa | Ağır, Türkçe zayıf | 50–300 MB — senin kitleye fazla |
+
+Pratik öneri: **çift motor**.
+
+- Varsayılan: Tesseract (`tur+eng`) — küçük, dil net
+- “Gelişmiş OCR” butonu: PaddleOCR (WebGPU varsa), yoksa WASM
+- İlk yüklemede Paddle modelini çekme; kullanıcı tıklayınca indir (senin `loadExternalScript` kalıbı)
+
+Türkçe kritik. Paddle’ın latin/multilingual recognition + detection genelde basılı TR’de Tesseract’i geçer; **mutlaka dilekçe / kimlik / fatura ile A/B test** et. Arapça zaten Tesseract `ara` ile durabilir.
+
+### 4. Ürün tarafı (doğruluk kadar önemli)
+
+1. **Aranabilir PDF:** Metni `pdf-lib` ile görünmez text layer olarak göm. Kullanıcı “metin tanı” deyince hem `.txt` hem aranabilir PDF alsın. iLovePDF’in sattığı şey aslında bu.
+2. **Sayfa tipi:** Dilekçe / tablo / fiş. PSM ve ön işlem buna göre değişsin.
+3. **Düzeltme sözlüğü:** TR için sık hatalar: `İ/I`, `ş/s`, `ğ/g`, `0/O`, `1/l`. Basit replace + kullanıcı sözlüğü.
+4. **PDF’de zaten metin varsa OCR yapma.** pdf.js `getTextContent` doluysa onu kullan; tarama değilse Tesseract’e gerek yok.
+
+### 5. Yapma
+
+- OCR’ye CCITT/1-bit faks vermek
+- 72–150 DPI canvas
+- Her sayfada yeni worker + dil indirme
+- Vision LLM (GPT vs.) — gizlilik vaadini bitirir, maliyetli, tutarsız
+- “ABBYY kadar olacak” hedefi
+
+### Sıra
+
+1. **Bu hafta:** 300 DPI gri ön işlem + warp + `tessdata_best` + PSM 4/6 + worker yeniden kullanımı. Tek başına en büyük sıçrama.
+2. **Sonra:** Confidence + aranabilir PDF.
+3. **Sonra:** PaddleOCR’yi “gelişmiş” motor olarak, lazy load, Türkçe belgelerle kıyas.
+
+İstersen bir sonraki adımda mevcut `batchOcrSelected` / `quickExportFiles` OCR dallarına birebir uygulanacak ön işlem + Tesseract ayar yamasını çıkarabilirim.

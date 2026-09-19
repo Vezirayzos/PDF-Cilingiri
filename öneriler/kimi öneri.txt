@@ -1,0 +1,61 @@
+Evet, birkaç önemli ekleme yapmak isterim — özellikle senin kendi önerine ("OCR'yi orijinal renkli belgeden yap, faks çıktısına katman olarak monte et") teknik bir cevap, çünkü diğer dört öneride bu fikir ya hiç yok ya da "aranabilir PDF" olarak yarım geçilmiş.
+
+## 1. Senin önerin tamamen doğru ve aslında en güçlü fark yaratan özellik
+
+Bu, önerilerdeki "aranabilir PDF"den bir adım öte: **faks çıktısı + görünmez metin katmanı**. Yani kullanıcı tek dosya alır: arşiv için 300 DPI 1-bit G4 faks (KB'lar civarı), ama üzerinde Ctrl+F, kopyala-yapıştır çalışan metin katmanı. Teknik olarak gayet temiz çalışır çünkü:
+
+- OCR girdisi: temiz orijinal canvas'tan (filtresiz, warp edilmiş, 300 DPI)
+- Görüntü: aynı kaynaktan CCITT G4
+- İkisi de aynı kaynak sayfadan türediği için koordinat eşleştirmesi basit: sayfa genişliği oranı kadar ölçekle
+
+Yani "ikisini bir den" isteyen kullanıcı için yeni bir mod ekleyebilirsin: `🏛️+🔍 Faks + OCR (Aranabilir)`. Mevcut hızlı mod seçicisine beşinci seçenek olarak girer.
+
+## 2. Ama dikkat: DeepSeek'in kodunda Türkçe karakter hatası var
+
+DeepSeek'in önerdiği `buildSearchablePdf` kodu `StandardFonts.Helvetica` kullanıyor. pdf-lib'in standart fontları **WinAnsi (Windows-1252)** kodlamalıdır — `ü ö ç` Latin-1'de olduğu için sorunsuz ama **`İ`, `ı`, `ş`, `ğ` WinAnsi'de yok**. OCR çıktısındaki Türkçe karakterler PDF'e girince bozulur.
+
+Çözüm: Türkçe destekli bir TTF'yi subset'leyip embed etmek (pdf-lib `doc.embedFont(ttfBytes, { subset: true })` destekler). Ör. ~100 KB'lık bir font yeterli; `subset: true` ile kullanılan karakterlere indirgenir, çıktı şişmez.
+
+## 3. OCR çıktısını doğru al
+
+`worker.recognize()` ile `res.data.text` yerine **`res.data.words`** (kelime + bbox + confidence) kullanmalısın:
+
+```javascript
+const res = await worker.recognize(ocrCanvas);
+for (const w of res.data.words) {
+  const { x0, y0, x1, y1 } = w.bbox;
+  const fontSize = (y1 - y0) * 0.85;
+  page.drawText(w.text, {
+    x: x0 * xScale,                 // canvas → PDF noktası ölçeği
+    y: pageHeight - y1 * yScale,    // PDF koordinatı yukarıdan aşağı değil
+    size: fontSize,
+    font: embeddedTrFont,           // WinAnsi DEĞİL
+    color: rgb(0, 0, 0),
+    opacity: 0                      // görünmez ama aranabilir/kopyalanabilir
+  });
+}
+```
+
+İki pratik detay:
+- `opacity: 0` bazı okuyucularda seçim görselini bozabiliyor; alternatif `renderingMode` ile invisible text kullanmak, ya da çok düşük opaklık (0.01) denemek.
+- Confidence < ~60 olan kelimeleri sarı highlight ile işaretleme fikri Grok'tan geldi; bunu **metin katmanına değil ayrı bir annotation olarak** eklemek daha temiz olur, faks görüntüsüne dokunmazsın.
+
+## 4. Koordinat ölçek tuzağı
+
+CCITT yolunda sayfayı A4'e sığdırırken (`a4Width = 595.28`, yükseklik oransal) sayfa oranı değişiyor. OCR canvas'ı aynı oranda render etmediysen bbox'lar kayar. En güvenli yol: OCR canvas'ını ve CCITT canvas'ını **aynı render çağrısından** türetmek (tek canvas → biri gri OCR kopyası, biri 1-bit G4'a giren). Böylece ölçek sabit tek katsayı olur.
+
+## 5. Küçük ama değerli eklemeler (önerilerde olmayan)
+
+- **PDF zaten metin katmanlıysa kısayol:** Grok bunu söylemişti ama kombinasyonda kritik: `getTextContent()` metin varsa OCR'yi hiç çalıştırma, mevcut metin koordinatlarını doğrudan faks PDF'ine taşı. Milisaniye sürer, Tesseract'dan daha doğru olur.
+- **Quick mode'da "Faks + OCR" seçilince `quick-ocr-lang` zaten görünüyor**, UI değişikliği neredeyse sıfır — sadece yeni bir radio + pipeline dallanması.
+- **Worker paylaşımı:** Hem quickExport hem batchOcr aynı Tesseract worker'ını kullanmalı; ikisi ayrı ayrı worker yaratırsa (şu an durum bu) dil paketi iki kez iner.
+- İleride PaddleOCR'a geçersen bu mimari (kelime bbox'ları + ayrı görüntü katmanı) olduğu gibi taşınır — yatırım boşa gitmez.
+
+## Önerdiğim sıralamaya katkı
+
+1. OCR hazırlık hattı (300 DPI gri) + doğru Tesseract ayarları — tüm önerilerde ortak, doğru
+2. **Senin önerin: "Faks + OCR" kombine modu** (Türkçe font embed ile) — bunu P1'e, hatta P0'a çekerim çünkü rakiplerin (iLovePDF) parayla sattığı şeyin gizlilik odaklı, ücretsiz karşılığı ve senin G4 moat'ınla birleşince gerçek bir "tek bunlarda var" özelliği olur
+3. Bellek temizliği + modal scale düzeltmesi
+4. PaddleOCR (Türkçe A/B testi şartıyla)
+
+İstersen "Faks + OCR" modunun mevcut `quickExportFiles` içine doğrudan uygulanmış halini (ccitt + text layer tek pipeline'da, TTF embed dahil) çıkarabilirim.

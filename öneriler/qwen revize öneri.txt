@@ -1,0 +1,16 @@
+Revize Edilmiş ve Gerçekçi Yol Haritası
+Claude'un eleştirileriyle şekillenen, Blogspot gerçeklerine ve gerçek UX'e uygun nihai aksiyon planı:
+Kod Organizasyonu (Blogspot Uyumlu):
+Kodu mantıksal dosyalara bölün (pdf-engine.js, ocr-worker.js, modal-ui.js).
+Build aracı olarak esbuild veya vite-plugin-singlefile kurun. Tek komutla (npm run build) tüm kodu tek bir index.html'e gömün. Blogspot'a sadece bu dosyayı yapıştırın.
+Bellek (Sadece Ağırları Öldür):
+Thumbnail grid'i hafızada tut (Virtual Scrolling yerine, mobilde OOM riskine karşı sadece DOM'dan çıkarıp Map'te canvas referansı olarak sakla).
+fullCanvas'ları modal kapanınca veya sekme gidince anında null'a çek ve width=0 yap.
+Worker Mimarisi (UI Donmasın):
+OpenCV, CCITT G4 Encoder ve Tesseract'ı OffscreenCanvas destekli Worker'lara taşı. Main thread sadece mesajlaşsın ve UI'ı güncellesin.
+OCR Stratejisi (Grok'un da dediği gibi):
+OCR'ye asla 1-bit G4 (Faks) gönderme.
+300 DPI, Gri tonlama, Warp (perspektif) uygulanmış, beyaz kenarlıklı görüntüyü Worker'a yolla.
+tessdata_best ve PSM 4/6 kullan.
+
+b

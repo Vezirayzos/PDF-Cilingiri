@@ -1,0 +1,9 @@
+ocr ye g4 faks çıktısı göndermek hatalı demişsiniz de
+
+aslında faks çıktısı arşiv içindir.
+
+kullanıcı önce faks sonra ocr derse biz ne yapabilirz ki?
+
+ikisini bir den derse, orjinal renkli belgede, metin ocr yapılsa sonra saklansa, sonra faks çıktısı üzerine katman olarak eklense olur mu?
+
+yani ocr yi asıl dökümandan yapacak, faks çıktısı üzerine montaj edecek

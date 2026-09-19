@@ -1,0 +1,25 @@
+# Build directories
+native_qt/build/
+desktop/dist/
+desktop/dist_portable/
+desktop/src/bin/
+desktop/src/obj/
+desktop/src/assets.zip
+
+# Release binaries (upload to GitHub Releases instead of git tracking)
+releases/
+*.exe
+*.dll
+
+# Archives and large backups
+*.7z
+*.zip
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+*.user
+
+# Operating System
+Thumbs.db
+desktop.ini

@@ -1,0 +1,54 @@
+Paylaştığınız dosyaları ve Grok tarafından üretilen analiz/öneri metinlerini detaylıca inceledim. 
+
+Öncelikle tebrik ederim; **PDF Çilingiri** mimarisi, gizlilik odaklı yaklaşımı ve "sıfır sunucu maliyeti" ile niş ama çok sadık bir kitleye hitap etme potansiyeli taşıyan, mühendislik harikası bir proje. Grok'un özellikle **OCR için 1-bit G4 yerine 300 DPI gri görüntü kullanılması**, **bellek yönetimi (4 kopya tuzağı)** ve **Tesseract/PaddleOCR geçişi** hakkındaki tespitleri son derece isabetli ve altın değerinde.
+
+Ben bir **Kıdemli Yazılım Mimarı ve Ürün Stratejisti** gözüyle, Grok'un teknik önerilerini tamamlayacak, projenin **sürdürülebilirliği, ölçeklenebilirliği ve kullanıcı deneyimi (UX)** açısından kritik ek önerilerimi sunuyorum:
+
+---
+
+### 1. Mimari ve Kod Organizasyonu (Monolith'ten Kurtuluş)
+Grok'un belirttiği "138 KB'lık tek dosya" sorunu, proje büyüdükçe sizi felç edecektir.
+*   **Öneri:** Projeyi acilen **Vite + ES Modules** altyapısına taşıyın. Kodu `core/` (pdf-lib, pdf.js işlemleri), `workers/` (OCR, CCITT, OpenCV), `ui/` (modal, grid, event listenerlar) olarak modüler hale getirin.
+*   **Neden?** Tree-shaking ile kullanılmayan kütüphane kodlarını ayıklarsınız. Ayrıca OpenCV veya Tesseract gibi ağır kütüphaneleri "Dynamic Import" (`import('...')`) ile sadece kullanıcı butona bastığında yükleyerek ilk açılış (FCP) süresini dramatik şekilde düşürürsünüz.
+
+### 2. İleri Seviye Bellek ve Performans Yönetimi
+Grok "OffscreenCanvas ve Worker" demiş, ben bunun *nasıl* yapılacağına dair kritik bir tarayıcı API'si ekliyorum:
+*   **Transferable Objects (Sıfır Kopya):** Canvas verilerini Main Thread'den Worker'a gönderirken normal postMessage kullanırsanız tarayıcı veriyi kopyalar (RAM israfı). Bunun yerine `worker.postMessage({canvas}, [canvas])` şeklinde **Transferable** olarak gönderin. Veri kopyalanmaz, sadece referans (pointer) el değiştirir. RAM kullanımı yarı yarıya düşer.
+*   **Virtual Scrolling (Sanal Kaydırma):** Kademe 2'deki sayfa grid'i (thumbnail) için DOM'a tüm sayfaları aynı anda basmayın. 100 sayfalık bir PDF'te 100 `<canvas>` elementi mobil Safari'yi anında çökertir (OOM - Out of Memory). Sadece ekranda görünen ve tampon (buffer) bölgedeki sayfaları render edin.
+*   **Page Visibility API:** Kullanıcı tarayıcıda başka bir sekmeye geçtiğinde (`document.hidden`), arka plandaki tüm canvas'ları `width=0` yaparak RAM'i OS'e iade edin. Sekmeye geri dönüldüğünde lazy-load ile tekrar çizin.
+
+### 3. UX, Mobil ve Erişilebilirlik (A11y)
+`index.html` dosyasındaki UI yapısına baktığımda mobilde "buton kalabalığı" ve "karmaşık etkileşim" riski görüyorum.
+*   **Bilişsel Yükü Azaltma:** "Hızlı Dışa Aktar" ve "İnce Ayar" gibi seçenekleri mobilde `Bottom Sheet` (alttan açılan menü) veya `Action Sheet` formatında sunun. Ekran klavye veya modal yüzünden küçülmesin.
+*   **Focus Trap & A11y:** Grok'un dediği gibi modal açıldığında odak (focus) tuzağı şarttır. Aksi halde klavye kullanıcıları (veya ekran okuyucular) modalın arkasındaki butonlara basabilir. `focus-trap` gibi hafif kütüphaneler veya basit bir JS döngüsü ile `Tab` tuşu sadece modal içinde kalmalıdır.
+*   **Haptic Feedback (Dokunsal Geri Bildirim):** Mobilde "Leke Silici" fırçayıken veya "Köşe Sürüklerken" `navigator.vibrate(10)` gibi mikro titreşimler kullanarak CamScanner'dan bile daha premium bir his verebilirsiniz.
+
+### 4. OCR ve "Aranabilir PDF" Stratejisi
+Grok'un OCR önerileri mükemmel. Buna ek olarak ürün tarafında şu "wow-effect" (vay canına) özelliğini eklemelisiniz:
+*   **Metin Katmanı (Searchable PDF):** OCR bittiğinde, Tesseract'ın döndürdüğü `bounding box` (kelime kutuları) ve metin verisini alın. `pdf-lib` kullanarak orijinal PDF'in üzerine **görünmez (opacity 0), kopyalanabilir** text layer ekleyin. 
+*   **Sonuç:** Kullanıcı "OCR Yap" dediğinde sadece `.txt` değil, aynı zamanda **Ctrl+F ile içinde arama yapılabilen yeni bir PDF** indirir. iLovePDF ve Adobe'nin parayla sattığı temel özellik budur.
+*   **Native Text Extraction:** Eğer yüklenen PDF zaten dijitalse (tarama değil), `pdf.js`'in `getTextContent()` metodunu kullanarak Tesseract'ı *hiç çalıştırmadan* metni çekin. Bu milisaniyeler sürer ve kullanıcıyı büyüler.
+
+### 5. Güvenlik (İstemci Taraflı Olsa Bile)
+*   **Worker Sandboxing:** PDF işleme, OpenCV ve OCR işlemlerini mutlaka **Web Worker** içinde yapın. Worker'ların DOM'a erişimi yoktur. Eğer `pdf.js` veya `OpenCV`'nin içindeki bir C/WASM kodu exploit edilirse bile, ana sayfanın (DOM) güvenliği korunur, cookie/localStorage çalınamaz.
+
+### 6. SEO ve Pazarlama (Organik Büyüme)
+"PDF Çilingiri" harika bir marka adı ancak insanlar arama çubuğuna "çilingir" yazmaz.
+*   **Long-Tail Anahtar Kelimeler:** Landing page'de ve Meta etiketlerde şu cümleleri mutlaka geçirin: *"Sunucuya yüklemeden PDF birleştirme"*, *"Gizli OCR (Tarayıcıda metin tanıma)"*, *"300 DPI E-Faks PDF dönüştürücü"*.
+*   **Güvenlik Rozeti:** Sitenin en tepesindeki "%100 İstemci Taraflı" ibaresinin yanına küçük bir "Wi-Fi / Network Cut" ikonu koyun. *"İnternetinizi kessin, bu araç çalışır. Veriniz asla dışarı çıkmaz."* mesajı, kurumsal ve gizlilik takıntılı kullanıcıları (avukatlar, muhasebeciler, devlet personeli) mıknatıs gibi çeker.
+
+### 7. Sürdürülebilirlik ve Monetization
+Sunucu maliyetiniz sıfır ama CDN ve AdSense bağımlısınız.
+*   **PWA ve Offline First:** Service Worker'ı güçlendirin. Uygulama bir kez açıldıktan sonra internet kesilse bile çalışabilmeli. Bu, "gerçek bir masaüstü uygulaması" hissi verir.
+*   **Bağış / "Buy Me a Coffee" Modeli:** AdSense bazen UI'ı bozar ve yavaştır. Bunun yerine "Uygulamayı beğendin mi? Geliştiriciye kahve ısmarla" butonu koyun. Gizlilik odaklı araçların kullanıcıları, emeğe saygı duyup bağış yapmaya çok daha meyillidir.
+
+---
+
+### 🚀 Özet Yol Haritası (Önümüzdeki 1 Ay İçin)
+
+1.  **Hafta 1 (Temizlik & Bellek):** Kodu Vite ile modülerleştir. Thumbnail grid'e *Virtual Scrolling* ekle. Canvas kopyalama yerine *Transferable Objects* kullan.
+2.  **Hafta 2 (OCR Devrimi):** Grok'un dediği 300 DPI Gri + `tessdata_best` + PSM ayarlarını yap. **Aranabilir PDF (Text Layer)** özelliğini ekle.
+3.  **Hafta 3 (Modal & Warp):** Modal koordinat hassasiyetini `ResizeObserver` ile çözü. OpenCV fallback mantığını oturt.
+4.  **Hafta 4 (UX & SEO):** Mobil dokunmatik iyileştirmeleri, SEO meta tag'leri ve PWA offline desteğini sonlandır.
+
+Eğer isterseniz, **OCR için Tesseract Worker'ının nasıl doğru ayarlanacağına (PSM, OEM, Gri Ön İşleme)** veya **Virtual Scrolling / Transferable Objects** implementasyonunun kod mimarisine dair spesifik bir örnek (pseudo-code / mimari şema) çıkarabilirim. Hangi konuya önce dalalım?
