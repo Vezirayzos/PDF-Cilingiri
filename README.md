@@ -9,8 +9,8 @@
 
 GitHub Releases üzerinden tek tıkla her zaman en son güncel sürümü indirebilirsiniz:
 
-* 🚀 **[PDF Çilingiri (Saf C++ / Qt 6 Portable .ZIP İndir)](https://github.com/mkrts88/onlinepdf/releases/latest/download/PDFCilingiri-v36-Windows-Portable.zip)** *(Önerilen - Donanım Hızlandırmalı, 0 Gecikme)*
-* 📦 **[PDF Çilingiri (Tek Dosya Portable .EXE İndir)](https://github.com/mkrts88/onlinepdf/releases/latest/download/PDFCilingiri-v36-SingleFile.exe)** *(Kurulumsuz Tek Dosya)*
+* 🚀 **[PDF Çilingiri (Saf C++ / Qt 6 Portable .ZIP İndir)](https://github.com/Vezirayzos/PDF-Cilingiri/releases/latest/download/PDFCilingiri-v36-Windows-Portable.zip)** *(Önerilen - Donanım Hızlandırmalı, 0 Gecikme)*
+* 📦 **[PDF Çilingiri (Tek Dosya Portable .EXE İndir)](https://github.com/Vezirayzos/PDF-Cilingiri/releases/latest/download/PDFCilingiri-v36-SingleFile.exe)** *(Kurulumsuz Tek Dosya)*
 
 ---
 
